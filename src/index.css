@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --orange: #CF731B;
+  --orange-dark: #b05f10;
+  --orange-light: #f9ede0;
+  --black: #1a1a1a;
+  --gray-50: #f8f8f6;
+  --gray-100: #f0ede8;
+  --gray-200: #e0ddd8;
+  --gray-400: #9e9b96;
+  --gray-600: #5a5855;
+  --white: #fff;
+  --font: 'Montserrat', sans-serif;
+  --radius: 10px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--gray-50);
+  color: var(--black);
+  min-height: 100vh;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, select, textarea, button { font-family: var(--font); }
+
+input, select, textarea {
+  font-size: 14px;
+  color: var(--black);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border 0.15s, background 0.15s;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--orange);
+  background: white;
+}
+input::placeholder, textarea::placeholder { color: var(--gray-400); }
+textarea { resize: vertical; min-height: 80px; }
+
+.step-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--black);
+}
+.step-desc {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--gray-100); }
+::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 3px; }

@@ -1,0 +1,68 @@
+.wrap {
+  text-align: center;
+  padding: 60px 24px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--black);
+}
+
+.desc {
+  color: var(--gray-600);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 340px;
+  margin: 0 auto 28px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--gray-100);
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 32px;
+}
+
+.badgeAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--orange);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnNew {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 13px 32px;
+  border-radius: 8px;
+  border: none;
+  background: var(--orange);
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnNew:hover {
+  background: var(--orange-dark);
+}

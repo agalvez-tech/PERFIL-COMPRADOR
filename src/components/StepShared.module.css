@@ -1,0 +1,89 @@
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+
+.amountWrap {
+  position: relative;
+}
+
+.amountWrap input {
+  padding-right: 28px;
+}
+
+.amountSuffix {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-400);
+  pointer-events: none;
+}
+
+.inputError {
+  border-color: #dc2626 !important;
+}
+
+.configBanner {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #78350f;
+  margin-bottom: 16px;
+}
+
+.resumenRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 13px;
+}
+
+.resumenRow:last-child {
+  border-bottom: none;
+}
+
+.resumenKey {
+  font-size: 12px;
+  color: var(--gray-600);
+  font-weight: 600;
+}
+
+.resumenVal {
+  font-weight: 600;
+  color: var(--black);
+  text-align: right;
+}
+
+.qSubtitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--orange-light);
+}
+
+@media (max-width: 520px) {
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}

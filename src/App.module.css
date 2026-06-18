@@ -1,0 +1,22 @@
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.pageHeader {
+  margin-bottom: 20px;
+}
+
+.pageTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 4px;
+}
+
+.pageDesc {
+  font-size: 13px;
+  color: var(--gray-600);
+  line-height: 1.5;
+}
