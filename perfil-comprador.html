@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#CF731B">
+<title>Perfil del Comprador · RK Palanca</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --orange: #CF731B; --orange-dark: #b05f10; --orange-light: #f9ede0;
+  --black: #1a1a1a; --gray-50: #f8f8f6; --gray-100: #f0ede8;
+  --gray-200: #e0ddd8; --gray-400: #9e9b96; --gray-600: #5a5855;
+  --font: 'Montserrat', sans-serif; --radius: 10px;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--gray-50); color: var(--black); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
+input, select, textarea, button { font-family: var(--font); }
+input, select, textarea { font-size: 14px; color: var(--black); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px 12px; outline: none; transition: border .15s, background .15s; width: 100%; }
+input:focus, select:focus, textarea:focus { border-color: var(--orange); background: white; }
+input::placeholder, textarea::placeholder { color: var(--gray-400); }
+textarea { resize: vertical; min-height: 80px; }
+input.ai-filled { border-color: #16a34a !important; background: #f0fdf4 !important; }
+
+/* HEADER */
+.header { background: var(--black); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
+.header-inner { padding: 0 20px; height: 58px; display: flex; align-items: center; justify-content: space-between; max-width: 720px; margin: 0 auto; }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo-mark { width: 34px; height: 34px; background: var(--orange); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: white; letter-spacing: -.5px; flex-shrink: 0; }
+.header-brand { color: rgba(255,255,255,.55); font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; display: block; }
+.header-subtitle { color: white; font-size: 13px; font-weight: 700; display: block; }
+.settings-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; cursor: pointer; font-size: 16px; padding: 7px 10px; line-height: 1; transition: background .15s; }
+.settings-btn:hover { background: rgba(255,255,255,.15); }
+
+/* MAIN */
+.main { max-width: 720px; margin: 0 auto; padding: 24px 16px 40px; }
+.page-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.page-desc { font-size: 13px; color: var(--gray-600); line-height: 1.5; margin-bottom: 20px; }
+
+/* AI ZONE */
+.ai-zone { background: white; border-radius: var(--radius); border: 2px dashed var(--orange); margin-bottom: 16px; overflow: hidden; }
+.ai-zone-header { background: linear-gradient(135deg,#1a1a1a 0%,#2d2019 100%); padding: 13px 20px; display: flex; align-items: center; gap: 10px; }
+.ai-badge { background: var(--orange); color: white; font-size: 9px; font-weight: 700; letter-spacing: .08em; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+.ai-zone-title { color: white; font-size: 12px; font-weight: 700; letter-spacing: .03em; }
+.ai-zone-body { padding: 18px 20px; }
+.ai-drop { border: 2px dashed var(--gray-200); border-radius: 10px; padding: 26px 20px; text-align: center; cursor: pointer; transition: all .2s; background: var(--gray-50); position: relative; }
+.ai-drop:hover, .ai-drop.dragover { border-color: var(--orange); background: var(--orange-light); }
+.ai-drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.ai-drop-icon { font-size: 30px; margin-bottom: 8px; line-height: 1; }
+.ai-drop-text { font-size: 13px; font-weight: 700; color: var(--black); margin-bottom: 3px; }
+.ai-drop-sub { font-size: 11px; color: var(--gray-400); }
+.ai-selected { display: none; align-items: center; gap: 12px; padding: 12px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; margin-top: 10px; }
+.ai-selected.show { display: flex; }
+.ai-sel-icon { font-size: 22px; flex-shrink: 0; }
+.ai-sel-info { flex: 1; min-width: 0; }
+.ai-sel-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-sel-size { font-size: 11px; color: var(--gray-400); }
+.ai-sel-remove { background: none; border: none; cursor: pointer; color: var(--gray-400); font-size: 16px; padding: 4px; border-radius: 4px; }
+.ai-sel-remove:hover { color: #dc2626; background: #fef2f2; }
+.btn-extract { width: 100%; margin-top: 10px; padding: 11px; background: var(--orange); color: white; border: none; border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-extract:hover:not(:disabled) { background: var(--orange-dark); }
+.btn-extract:disabled { opacity: .45; cursor: not-allowed; }
+.ai-status { margin-top: 10px; border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 600; display: none; align-items: center; gap: 10px; }
+.ai-status.loading { display: flex; background: #fffbeb; border: 1px solid #fbbf24; color: #92400e; }
+.ai-status.success { display: flex; background: #f0fdf4; border: 1px solid #86efac; color: #14532d; }
+.ai-status.error   { display: flex; background: #fef2f2; border: 1px solid #fca5a5; color: #7f1d1d; }
+.spinner { width: 14px; height: 14px; border: 2px solid #fbbf24; border-top-color: #92400e; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ai-badge-inline { display: none; align-items: center; gap: 5px; background: #f0fdf4; border: 1px solid #86efac; color: #16a34a; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-left: 8px; letter-spacing: .03em; vertical-align: middle; }
+.ai-badge-inline.show { display: inline-flex; }
+
+/* CARD */
+.card { background: white; border-radius: var(--radius); border: 1px solid var(--gray-200); margin-bottom: 16px; overflow: hidden; }
+.card-header { background: var(--gray-100); border-bottom: 1px solid var(--gray-200); padding: 11px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card-icon { width: 28px; height: 28px; background: var(--orange); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.card-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.card-body { padding: 20px; }
+
+/* FIELDS */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 11px; font-weight: 600; color: var(--gray-600); letter-spacing: .04em; text-transform: uppercase; }
+.field label .req { color: var(--orange); }
+.grid { display: grid; gap: 14px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .grid-2,.grid-3 { grid-template-columns: 1fr; } }
+.amount-wrap { position: relative; }
+.amount-wrap input { padding-right: 28px; }
+.amount-suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 600; color: var(--gray-400); pointer-events: none; }
+
+/* CAPTADORES */
+.captador-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(118px,1fr)); gap: 8px; }
+.captador-card { border: 1.5px solid var(--gray-200); border-radius: 8px; padding: 10px 6px; cursor: pointer; transition: all .15s; text-align: center; background: white; font-family: var(--font); }
+.captador-card:hover,.captador-card.selected { border-color: var(--orange); background: var(--orange-light); }
+.captador-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--orange); color: white; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; transition: background .15s; }
+.captador-card.selected .captador-avatar { background: var(--orange-dark); }
+.captador-name { font-size: 11px; font-weight: 600; color: var(--black); display: block; line-height: 1.3; }
+
+/* QUESTIONS */
+.q-row { padding: 13px 0; border-bottom: 1px solid var(--gray-100); }
+.q-row:last-child { border-bottom: none; }
+.q-main { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.q-label { font-size: 13px; color: var(--black); line-height: 1.5; flex: 1; }
+.q-label.error { color: #dc2626; }
+.toggle-group { display: flex; gap: 6px; flex-shrink: 0; }
+.toggle-btn { padding: 7px 14px; border-radius: 6px; border: 1.5px solid var(--gray-200); background: white; font-family: var(--font); font-size: 12px; font-weight: 700; color: var(--gray-400); cursor: pointer; transition: all .15s; }
+.toggle-btn.active-si { border-color: #16a34a !important; background: #f0fdf4 !important; color: #16a34a !important; }
+.toggle-btn.active-no { border-color: #dc2626 !important; background: #fef2f2 !important; color: #dc2626 !important; }
+.sub-q { margin-top: 12px; background: var(--gray-50); border-radius: 8px; padding: 12px 14px; border-left: 3px solid var(--orange-light); }
+.sub-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sub-label { font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 8px; display: block; }
+
+/* FILE SLOTS */
+.file-slots { display: flex; flex-direction: column; gap: 10px; }
+.file-slot { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1.5px dashed var(--gray-200); border-radius: 10px; background: var(--gray-50); cursor: pointer; transition: all .15s; }
+.file-slot:hover { border-color: var(--orange); background: var(--orange-light); }
+.file-slot.done { border-style: solid; border-color: #16a34a; background: #f0fdf4; }
+.file-slot.has-error { border-color: #dc2626 !important; background: #fef2f2 !important; }
+.file-icon { font-size: 22px; flex-shrink: 0; }
+.file-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.file-lbl { font-size: 12px; font-weight: 700; color: var(--black); }
+.file-lbl .req { color: var(--orange); }
+.file-nm { font-size: 11px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-slot.done .file-nm { color: #16a34a; font-weight: 600; }
+.file-rm { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--gray-400); padding: 4px 6px; border-radius: 4px; }
+.file-rm:hover { background: #fef2f2; color: #dc2626; }
+
+/* ERRORS */
+.error-banner { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #991b1b; margin-bottom: 16px; }
+.field-error { font-size: 11px; color: #dc2626; font-weight: 600; margin-top: 6px; }
+.input-error { border-color: #dc2626 !important; background: #fef2f2 !important; }
+
+/* SEND */
+.send-wrap { display: flex; justify-content: flex-end; padding: 8px 0 24px; }
+.btn-send { font-family: var(--font); font-size: 13px; font-weight: 700; padding: 13px 28px; border-radius: 8px; border: none; background: var(--orange); color: white; cursor: pointer; transition: background .15s; }
+.btn-send:hover:not(:disabled) { background: var(--orange-dark); }
+.btn-send:disabled { opacity: .55; cursor: not-allowed; }
+
+/* SUCCESS */
+.success-wrap { text-align: center; padding: 60px 24px; max-width: 480px; margin: 0 auto; }
+.success-icon { font-size: 48px; margin-bottom: 20px; }
+.success-title { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+.success-desc { color: var(--gray-600); font-size: 14px; line-height: 1.6; max-width: 340px; margin: 0 auto 28px; }
+.success-badge { display: inline-flex; align-items: center; gap: 10px; background: var(--gray-100); border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600; margin-bottom: 32px; }
+.success-av { width: 32px; height: 32px; border-radius: 50%; background: var(--orange); color: white; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.btn-new { font-family: var(--font); font-size: 14px; font-weight: 700; padding: 13px 32px; border-radius: 8px; border: none; background: var(--orange); color: white; cursor: pointer; }
+.btn-new:hover { background: var(--orange-dark); }
+
+/* SETTINGS MODAL */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: white; border-radius: 14px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.2); overflow: hidden; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--gray-200); background: var(--gray-100); }
+.modal-title { font-size: 14px; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 16px; color: var(--gray-400); cursor: pointer; padding: 4px 6px; border-radius: 4px; }
+.modal-close:hover { color: var(--black); background: var(--gray-200); }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.modal-section { font-size: 11px; font-weight: 700; color: var(--orange); letter-spacing: .05em; text-transform: uppercase; padding-bottom: 6px; border-bottom: 1px solid var(--orange-light); }
+.modal-desc { font-size: 12px; color: var(--gray-600); line-height: 1.5; }
+.modal-hint { font-size: 11px; color: var(--gray-400); line-height: 1.6; }
+.modal-hint code { background: var(--gray-100); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; }
+.btn-done { font-family: var(--font); font-size: 13px; font-weight: 700; padding: 10px 24px; border-radius: 8px; border: none; background: var(--orange); color: white; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="logo-mark">RK</div>
+      <div>
+        <span class="header-brand">RK Palanca Fontestad</span>
+        <span class="header-subtitle">Perfil del Comprador</span>
+      </div>
+    </div>
+    <button class="settings-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
+  </div>
+</header>
+
+<div class="main" id="main-view">
+  <p class="page-title">Perfil del Comprador</p>
+  <p class="page-desc">Sube la propuesta firmada y los datos se rellenarán solos con IA. Luego completa el checklist y envía al captador por Slack.</p>
+
+  <div id="error-banner" class="error-banner" style="display:none"></div>
+
+  <!-- IA EXTRACCIÓN -->
+  <div class="ai-zone">
+    <div class="ai-zone-header">
+      <span class="ai-badge">IA</span>
+      <span class="ai-zone-title">Extracción automática desde la propuesta firmada</span>
+    </div>
+    <div class="ai-zone-body">
+      <div class="ai-drop" id="ai-drop"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="handleAiDrop(event)">
+        <input type="file" id="ai-input" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.heic,.webp" onchange="setAiFile(this.files[0])">
+        <div class="ai-drop-icon">📄</div>
+        <div class="ai-drop-text">Sube la propuesta de precio</div>
+        <div class="ai-drop-sub">PDF · Word · Foto · Escaneado — Arrastra aquí o pulsa para seleccionar</div>
+      </div>
+      <div class="ai-selected" id="ai-selected">
+        <span class="ai-sel-icon" id="ai-sel-icon">📄</span>
+        <div class="ai-sel-info">
+          <div class="ai-sel-name" id="ai-sel-name"></div>
+          <div class="ai-sel-size" id="ai-sel-size"></div>
+        </div>
+        <button class="ai-sel-remove" onclick="clearAiFile()" title="Quitar">✕</button>
+      </div>
+      <div class="ai-status" id="ai-status">
+        <div class="spinner" id="ai-spinner"></div>
+        <span id="ai-status-msg"></span>
+      </div>
+      <button class="btn-extract" id="btn-extract" onclick="extractData()" disabled>
+        ✨ Extraer datos automáticamente
+      </button>
+    </div>
+  </div>
+
+  <!-- COMPRADOR -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">👤</span>
+      <span class="card-title">Datos del comprador</span>
+      <span class="ai-badge-inline" id="badge-comp">✓ Extraído por IA</span>
+    </div>
+    <div class="card-body">
+      <div class="grid">
+        <div class="field">
+          <label>Nombre y apellidos <span class="req">*</span></label>
+          <input type="text" id="compradorNombre" placeholder="Nombre completo">
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>NIF / DNI</label><input type="text" id="compradorNif" placeholder="12345678A"></div>
+          <div class="field"><label>Teléfono</label><input type="tel" id="compradorTel" placeholder="600 000 000"></div>
+        </div>
+        <div class="field"><label>Email</label><input type="email" id="compradorEmail" placeholder="email@ejemplo.com"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INMUEBLE -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">🏠</span>
+      <span class="card-title">Inmueble de interés</span>
+      <span class="ai-badge-inline" id="badge-inm">✓ Extraído por IA</span>
+    </div>
+    <div class="card-body">
+      <div class="grid">
+        <div class="field">
+          <label>Dirección <span class="req">*</span></label>
+          <input type="text" id="viviendaDir" placeholder="C/ Mayor, 12, 3º B, Foios">
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Ref. comercial</label><input type="text" id="viviendaRef" placeholder="FOI-1234"></div>
+          <div class="field">
+            <label>Precio de la oferta</label>
+            <div class="amount-wrap">
+              <input type="text" id="precioOferta" placeholder="180.000">
+              <span class="amount-suffix">€</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAPTADOR -->
+  <div class="card">
+    <div class="card-header"><span class="card-icon">🎯</span><span class="card-title">Captador de la vivienda</span></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px">Selecciona el captador — recibirá el perfil y los documentos por Slack.</p>
+      <div class="captador-grid" id="captador-grid"></div>
+      <p class="field-error" id="captador-error" style="display:none;margin-top:10px">Selecciona un captador.</p>
+    </div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="card">
+    <div class="card-header"><span class="card-icon">📋</span><span class="card-title">Checklist del comprador</span></div>
+    <div class="card-body">
+
+      <div class="q-row">
+        <div class="q-main">
+          <span class="q-label" id="lbl-cuestionarioRelleno">¿Se ha rellenado el cuestionario junto con el cliente?</span>
+          <div class="toggle-group">
+            <button class="toggle-btn" onclick="tog('cuestionarioRelleno','SI')" id="si-cuestionarioRelleno">SÍ</button>
+            <button class="toggle-btn" onclick="tog('cuestionarioRelleno','NO')" id="no-cuestionarioRelleno">NO</button>
+          </div>
+        </div>
+        <p class="field-error" id="err-cuestionarioRelleno" style="display:none">Campo obligatorio</p>
+      </div>
+
+      <div class="q-row">
+        <div class="q-main">
+          <span class="q-label" id="lbl-honorariosTres">¿Los honorarios son del 3%?</span>
+          <div class="toggle-group">
+            <button class="toggle-btn" onclick="tog('honorariosTres','SI')" id="si-honorariosTres">SÍ</button>
+            <button class="toggle-btn" onclick="tog('honorariosTres','NO')" id="no-honorariosTres">NO</button>
+          </div>
+        </div>
+        <p class="field-error" id="err-honorariosTres" style="display:none">Campo obligatorio</p>
+        <div class="sub-q" id="sub-autorizado" style="display:none">
+          <div class="sub-row">
+            <span class="sub-label" id="lbl-honorariosAutorizado" style="margin-bottom:0">⚠️ ¿Está autorizado por gerencia?</span>
+            <div class="toggle-group">
+              <button class="toggle-btn" onclick="tog('honorariosAutorizado','SI')" id="si-honorariosAutorizado">SÍ</button>
+              <button class="toggle-btn" onclick="tog('honorariosAutorizado','NO')" id="no-honorariosAutorizado">NO</button>
+            </div>
+          </div>
+          <p class="field-error" id="err-honorariosAutorizado" style="display:none">Indica si hay autorización de gerencia</p>
+        </div>
+      </div>
+
+      <div class="q-row">
+        <div class="q-main">
+          <span class="q-label" id="lbl-necesitaHipoteca">¿Necesita hacer hipoteca?</span>
+          <div class="toggle-group">
+            <button class="toggle-btn" onclick="tog('necesitaHipoteca','SI')" id="si-necesitaHipoteca">SÍ</button>
+            <button class="toggle-btn" onclick="tog('necesitaHipoteca','NO')" id="no-necesitaHipoteca">NO</button>
+          </div>
+        </div>
+        <p class="field-error" id="err-necesitaHipoteca" style="display:none">Campo obligatorio</p>
+        <div class="sub-q" id="sub-hipoteca" style="display:none">
+          <div class="grid-3">
+            <div class="field">
+              <label>Porcentaje</label>
+              <div class="amount-wrap"><input type="number" id="porcentajeHipoteca" placeholder="80" min="0" max="100"><span class="amount-suffix">%</span></div>
+            </div>
+            <div class="field"><label>Entidad bancaria</label><input type="text" id="bancoPrestamo" placeholder="CaixaBank, BBVA..."></div>
+            <div>
+              <span class="sub-label">¿Sujeta a tasación?</span>
+              <div class="toggle-group">
+                <button class="toggle-btn" onclick="tog('sujetaTaskacion','SI')" id="si-sujetaTaskacion">SÍ</button>
+                <button class="toggle-btn" onclick="tog('sujetaTaskacion','NO')" id="no-sujetaTaskacion">NO</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="q-row">
+        <div class="q-main">
+          <span class="q-label" id="lbl-vendeParaComprar">¿Vende para comprar?</span>
+          <div class="toggle-group">
+            <button class="toggle-btn" onclick="tog('vendeParaComprar','SI')" id="si-vendeParaComprar">SÍ</button>
+            <button class="toggle-btn" onclick="tog('vendeParaComprar','NO')" id="no-vendeParaComprar">NO</button>
+          </div>
+        </div>
+        <p class="field-error" id="err-vendeParaComprar" style="display:none">Campo obligatorio</p>
+        <div class="sub-q" id="sub-vende" style="display:none">
+          <div class="field">
+            <label>Explica la operación</label>
+            <textarea id="vendeExplicacion" placeholder="Describe la situación: qué vende, estado de la venta, plazos..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="q-row">
+        <div class="q-main">
+          <span class="q-label" id="lbl-sabePierde1000">¿Sabe que puede perder los 1.000 € si el vendedor acepta y luego se echan atrás?</span>
+          <div class="toggle-group">
+            <button class="toggle-btn" onclick="tog('sabePierde1000','SI')" id="si-sabePierde1000">SÍ</button>
+            <button class="toggle-btn" onclick="tog('sabePierde1000','NO')" id="no-sabePierde1000">NO</button>
+          </div>
+        </div>
+        <p class="field-error" id="err-sabePierde1000" style="display:none">Campo obligatorio</p>
+      </div>
+
+      <div class="q-row">
+        <div class="q-main">
+          <span class="q-label" id="lbl-sabeArrasNoHipoteca">¿Sabe que las arras no se condicionan a la concesión de la hipoteca?</span>
+          <div class="toggle-group">
+            <button class="toggle-btn" onclick="tog('sabeArrasNoHipoteca','SI')" id="si-sabeArrasNoHipoteca">SÍ</button>
+            <button class="toggle-btn" onclick="tog('sabeArrasNoHipoteca','NO')" id="no-sabeArrasNoHipoteca">NO</button>
+          </div>
+        </div>
+        <p class="field-error" id="err-sabeArrasNoHipoteca" style="display:none">Campo obligatorio</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DOCUMENTOS -->
+  <div class="card">
+    <div class="card-header"><span class="card-icon">📎</span><span class="card-title">Documentos adjuntos</span></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--gray-600);margin-bottom:16px">Los tres documentos son <strong>obligatorios</strong>. Se adjuntarán al captador en Slack.</p>
+      <div class="file-slots">
+        <div class="file-slot" id="slot-oferta" onclick="triggerFile('fileOferta')">
+          <input type="file" id="fileOferta" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display:none" onchange="handleFile('oferta',this)">
+          <span class="file-icon" id="icon-oferta">📎</span>
+          <div class="file-text"><span class="file-lbl">Oferta <span class="req">*</span></span><span class="file-nm" id="nm-oferta">Toca para adjuntar</span></div>
+          <button type="button" class="file-rm" id="rm-oferta" style="display:none" onclick="removeFile(event,'oferta')">✕</button>
+        </div>
+        <div class="file-slot" id="slot-honorarios" onclick="triggerFile('fileHonorarios')">
+          <input type="file" id="fileHonorarios" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display:none" onchange="handleFile('honorarios',this)">
+          <span class="file-icon" id="icon-honorarios">📎</span>
+          <div class="file-text"><span class="file-lbl">Honorarios <span class="req">*</span></span><span class="file-nm" id="nm-honorarios">Toca para adjuntar</span></div>
+          <button type="button" class="file-rm" id="rm-honorarios" style="display:none" onclick="removeFile(event,'honorarios')">✕</button>
+        </div>
+        <div class="file-slot" id="slot-justificante" onclick="triggerFile('fileJustificante')">
+          <input type="file" id="fileJustificante" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display:none" onchange="handleFile('justificante',this)">
+          <span class="file-icon" id="icon-justificante">📎</span>
+          <div class="file-text"><span class="file-lbl">Justificante <span class="req">*</span></span><span class="file-nm" id="nm-justificante">Toca para adjuntar</span></div>
+          <button type="button" class="file-rm" id="rm-justificante" style="display:none" onclick="removeFile(event,'justificante')">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="send-wrap">
+    <button class="btn-send" id="btn-send" onclick="handleSend()">📤 Enviar al captador</button>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="main" id="success-view" style="display:none">
+  <div class="success-wrap">
+    <div class="success-icon">✅</div>
+    <h2 class="success-title">¡Perfil enviado!</h2>
+    <p class="success-desc">El perfil del comprador y los documentos han sido enviados al captador por Slack.</p>
+    <div class="success-badge" id="success-badge"></div>
+    <br><br>
+    <button class="btn-new" onclick="resetApp()">Nuevo perfil</button>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="overlay" id="settings-overlay" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Ajustes</span>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-section">Slack</p>
+      <div class="field"><label>Token Slack Bot</label><input type="password" id="slackToken" placeholder="xoxb-..." autocomplete="off" oninput="localStorage.setItem('rk_slack_token',this.value)"></div>
+      <div class="field"><label>Tu nombre</label><input type="text" id="agenteRemitente" placeholder="Ej: Almudena Gálvez" oninput="localStorage.setItem('rk_agente_remitente',this.value)"></div>
+      <p class="modal-section" style="margin-top:4px">Extracción con IA</p>
+      <p class="modal-desc">API Key de Anthropic para leer la propuesta automáticamente. Se guarda solo en tu dispositivo.</p>
+      <div class="field"><label>API Key Anthropic</label><input type="password" id="anthropicKey" placeholder="sk-ant-..." autocomplete="off" oninput="localStorage.setItem('rk_anthropic_key',this.value)"></div>
+      <p class="modal-hint">Permisos Slack: <code>chat:write</code> · <code>files:write</code></p>
+    </div>
+    <div class="modal-footer"><button class="btn-done" onclick="closeSettings()">Guardar y cerrar</button></div>
+  </div>
+</div>
+
+<script>
+const CAPTADORES = [
+  {name:'Alejandro García',   channel:'C0AAJF80U07', initials:'AG'},
+  {name:'Almudena Gálvez',    channel:'DIRECT',       initials:'AL'},
+  {name:'Amparo Orts',        channel:'C0AAGQKHU4X', initials:'AO'},
+  {name:'Asunción Marco',     channel:'C0AAZVD8UUA', initials:'AS'},
+  {name:'Clara Ordoñez',      channel:'C0AAGR9Q2S3', initials:'CO'},
+  {name:'Claudia Stelling',   channel:'C0AAYB1QT8A', initials:'CS'},
+  {name:'Desiree López',      channel:'C0ABB99MV5F', initials:'DL'},
+  {name:'Eva Vallés',         channel:'C0AAJS3F0A3', initials:'EV'},
+  {name:'Fede Carbonell',     channel:'C0ABB13HW1F', initials:'FC'},
+  {name:'Fran Estelles',      channel:'C0AAUMPTSGM', initials:'FE'},
+  {name:'Jose Giménez',       channel:'C0ABSMNFDCY', initials:'JG'},
+  {name:'Lorena Lull',        channel:'C0AAS26GAKD', initials:'LL'},
+  {name:'Maria Jose Ordoñez', channel:'C0AAJGP9K0F', initials:'MJ'},
+  {name:'Mariano Del Prado',  channel:'C0B5FDE159T', initials:'MP'},
+  {name:'Mavi Castillo',      channel:'C0ABT3HLT1N', initials:'MC'},
+  {name:'Mª Luisa Bellver',   channel:'C0AAXU0MC4W', initials:'ML'},
+  {name:'Natalia Sanfélix',   channel:'C0AAWH6HJ3X', initials:'NS'},
+  {name:'Nuria',              channel:'PENDING',      initials:'NU'},
+  {name:'Rosa Doménech',      channel:'C0AAW8EEW94', initials:'RD'},
+  {name:'Sefa Gallent',       channel:'C0AB1TRTQ04', initials:'SG'},
+  {name:'Virginia Corral',    channel:'C0AB3HP8VBN', initials:'VC'},
+  {name:'Yvonne Vidal',       channel:'C0B6D3ZR1FA', initials:'YV'},
+];
+
+const EXTRACTION_PROMPT = `Eres un asistente que extrae información de documentos de propuesta de compra inmobiliaria.
+Analiza el documento y extrae ÚNICAMENTE estos datos en formato JSON puro (sin markdown, sin texto extra):
+{"compradorNombre":"nombre completo del comprador","compradorNif":"NIF o DNI","compradorTel":"teléfono si aparece","viviendaDir":"dirección completa del inmueble","viviendaRef":"referencia comercial","precioOferta":"precio en números sin símbolo € ni puntos de miles"}
+Si algún dato no aparece devuelve null para ese campo. No inventes datos.`;
+
+const T = {}; // toggle state
+let selectedCaptador = null;
+const FILES = {oferta:null, honorarios:null, justificante:null};
+let aiFile = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Render captadores
+  document.getElementById('captador-grid').innerHTML = CAPTADORES.map((c,i) =>
+    `<button type="button" class="captador-card" id="cap-${i}" onclick="selCap(${i})">
+      <div class="captador-avatar">${c.initials}</div>
+      <span class="captador-name">${c.name}</span>
+    </button>`).join('');
+  // Load saved settings
+  document.getElementById('slackToken').value     = localStorage.getItem('rk_slack_token')||'';
+  document.getElementById('agenteRemitente').value = localStorage.getItem('rk_agente_remitente')||'';
+  document.getElementById('anthropicKey').value   = localStorage.getItem('rk_anthropic_key')||'';
+});
+
+function selCap(i) {
+  selectedCaptador = CAPTADORES[i];
+  document.querySelectorAll('.captador-card').forEach(el => el.classList.remove('selected'));
+  document.getElementById(`cap-${i}`).classList.add('selected');
+  document.getElementById('captador-error').style.display = 'none';
+}
+
+// ── AI FILE ─────────────────────────────────────────────────────────────
+function handleAiDrop(e) {
+  e.preventDefault();
+  document.getElementById('ai-drop').classList.remove('dragover');
+  if (e.dataTransfer.files[0]) setAiFile(e.dataTransfer.files[0]);
+}
+
+function setAiFile(file) {
+  if (!file) return;
+  aiFile = file;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const icons = {jpg:'🖼️',jpeg:'🖼️',png:'🖼️',heic:'🖼️',webp:'🖼️',pdf:'📑',doc:'📝',docx:'📝'};
+  document.getElementById('ai-sel-icon').textContent = icons[ext]||'📄';
+  document.getElementById('ai-sel-name').textContent = file.name;
+  document.getElementById('ai-sel-size').textContent = (file.size/1024).toFixed(0)+' KB';
+  document.getElementById('ai-selected').classList.add('show');
+  document.getElementById('btn-extract').disabled = false;
+  setStatus('');
+}
+
+function clearAiFile() {
+  aiFile = null;
+  document.getElementById('ai-selected').classList.remove('show');
+  document.getElementById('ai-input').value = '';
+  document.getElementById('btn-extract').disabled = true;
+  setStatus('');
+}
+
+function setStatus(type, msg='') {
+  const el = document.getElementById('ai-status');
+  el.className = 'ai-status';
+  document.getElementById('ai-spinner').style.display = 'none';
+  if (!type) { el.style.display='none'; return; }
+  el.classList.add(type);
+  if (type==='loading') document.getElementById('ai-spinner').style.display='block';
+  document.getElementById('ai-status-msg').textContent = msg;
+}
+
+function fileToB64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function mediaType(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  return {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',heic:'image/jpeg',pdf:'application/pdf',
+    docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    doc:'application/msword'}[ext] || file.type || 'application/octet-stream';
+}
+
+async function extractData() {
+  const apiKey = localStorage.getItem('rk_anthropic_key')||'';
+  if (!apiKey) { alert('⚠️ Introduce la API Key de Anthropic en Ajustes (⚙️).'); openSettings(); return; }
+  if (!aiFile) return;
+
+  document.getElementById('btn-extract').disabled = true;
+  setStatus('loading', 'Analizando documento con IA…');
+
+  try {
+    const b64 = await fileToB64(aiFile);
+    const mt  = mediaType(aiFile);
+    const isImage = mt.startsWith('image/');
+    const isPdf   = mt === 'application/pdf';
+
+    const content = [
+      {
+        type: isImage ? 'image' : 'document',
+        source: { type: 'base64', media_type: mt, data: b64 }
+      },
+      { type: 'text', text: EXTRACTION_PROMPT }
+    ];
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{ role:'user', content }],
+      }),
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || 'Error API');
+
+    const text    = data.content?.find(b => b.type==='text')?.text || '';
+    const cleaned = text.replace(/```json|```/g,'').trim();
+    const parsed  = JSON.parse(cleaned);
+
+    applyExtracted(parsed);
+    setStatus('success', '✅ Datos extraídos — revisa y corrige si es necesario');
+  } catch(err) {
+    console.error(err);
+    setStatus('error', '⚠️ No se pudo extraer la información. Rellena los datos manualmente.');
+  }
+  document.getElementById('btn-extract').disabled = false;
+}
+
+function applyExtracted(data) {
+  const map = {
+    compradorNombre:'compradorNombre', compradorNif:'compradorNif',
+    compradorTel:'compradorTel', compradorEmail:'compradorEmail',
+    viviendaDir:'viviendaDir', viviendaRef:'viviendaRef', precioOferta:'precioOferta'
+  };
+  let fillComp=false, fillInm=false;
+  Object.entries(map).forEach(([key,id]) => {
+    if (data[key] != null && data[key] !== '') {
+      const el = document.getElementById(id);
+      if (el) {
+        el.value = String(data[key]);
+        el.classList.add('ai-filled');
+        if (['compradorNombre','compradorNif','compradorTel','compradorEmail'].includes(key)) fillComp=true;
+        if (['viviendaDir','viviendaRef','precioOferta'].includes(key)) fillInm=true;
+      }
+    }
+  });
+  if (fillComp) document.getElementById('badge-comp').classList.add('show');
+  if (fillInm)  document.getElementById('badge-inm').classList.add('show');
+}
+
+// ── TOGGLES ─────────────────────────────────────────────────────────────
+function tog(key, val) {
+  T[key] = T[key]===val ? null : val;
+  const v=T[key];
+  const si=document.getElementById(`si-${key}`), no=document.getElementById(`no-${key}`);
+  if(si) si.className='toggle-btn'+(v==='SI'?' active-si':'');
+  if(no) no.className='toggle-btn'+(v==='NO'?' active-no':'');
+  const err=document.getElementById(`err-${key}`); if(err) err.style.display='none';
+  const lbl=document.getElementById(`lbl-${key}`); if(lbl) lbl.classList.remove('error');
+  if(key==='honorariosTres'){
+    document.getElementById('sub-autorizado').style.display=v==='NO'?'block':'none';
+    if(v!=='NO'){T.honorariosAutorizado=null; resetT('honorariosAutorizado');}
+  }
+  if(key==='necesitaHipoteca') document.getElementById('sub-hipoteca').style.display=v==='SI'?'block':'none';
+  if(key==='vendeParaComprar') document.getElementById('sub-vende').style.display=v==='SI'?'block':'none';
+}
+function resetT(key){
+  const si=document.getElementById(`si-${key}`),no=document.getElementById(`no-${key}`);
+  if(si)si.className='toggle-btn'; if(no)no.className='toggle-btn';
+}
+
+// ── FILE SLOTS ───────────────────────────────────────────────────────────
+function triggerFile(id){document.getElementById(id).click();}
+function handleFile(key,input){
+  const file=input.files[0]; if(!file)return;
+  FILES[key]=file;
+  document.getElementById(`slot-${key}`).classList.add('done');
+  document.getElementById(`slot-${key}`).classList.remove('has-error');
+  document.getElementById(`icon-${key}`).textContent='✅';
+  document.getElementById(`nm-${key}`).textContent=file.name;
+  document.getElementById(`rm-${key}`).style.display='';
+}
+function removeFile(e,key){
+  e.stopPropagation();
+  FILES[key]=null;
+  const ids={oferta:'fileOferta',honorarios:'fileHonorarios',justificante:'fileJustificante'};
+  document.getElementById(ids[key]).value='';
+  document.getElementById(`slot-${key}`).classList.remove('done');
+  document.getElementById(`icon-${key}`).textContent='📎';
+  document.getElementById(`nm-${key}`).textContent='Toca para adjuntar';
+  document.getElementById(`rm-${key}`).style.display='none';
+}
+
+// ── VALIDATE ─────────────────────────────────────────────────────────────
+function validate(){
+  let ok=true;
+  ['compradorNombre','viviendaDir'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el.value.trim()){el.classList.add('input-error');ok=false;}
+    else el.classList.remove('input-error');
+  });
+  if(!selectedCaptador){document.getElementById('captador-error').style.display='block';ok=false;}
+  ['cuestionarioRelleno','honorariosTres','necesitaHipoteca','vendeParaComprar','sabePierde1000','sabeArrasNoHipoteca'].forEach(key=>{
+    const hasVal=!!T[key];
+    const err=document.getElementById(`err-${key}`), lbl=document.getElementById(`lbl-${key}`);
+    if(!hasVal){if(err)err.style.display='block';if(lbl)lbl.classList.add('error');ok=false;}
+    else{if(err)err.style.display='none';if(lbl)lbl.classList.remove('error');}
+  });
+  if(T.honorariosTres==='NO'&&!T.honorariosAutorizado){
+    document.getElementById('err-honorariosAutorizado').style.display='block';
+    document.getElementById('lbl-honorariosAutorizado').classList.add('error');
+    ok=false;
+  }
+  ['oferta','honorarios','justificante'].forEach(key=>{
+    const slot=document.getElementById(`slot-${key}`);
+    if(!FILES[key]){slot.classList.add('has-error');ok=false;}
+    else slot.classList.remove('has-error');
+  });
+  const banner=document.getElementById('error-banner');
+  if(!ok){banner.style.display='block';banner.textContent='⚠️ Hay campos sin completar. Revisa los elementos marcados.';window.scrollTo(0,0);}
+  else banner.style.display='none';
+  return ok;
+}
+
+// ── MESSAGE ──────────────────────────────────────────────────────────────
+function buildMsg(){
+  const nombre=document.getElementById('compradorNombre').value;
+  const nif=document.getElementById('compradorNif').value;
+  const tel=document.getElementById('compradorTel').value;
+  const email=document.getElementById('compradorEmail').value;
+  const dir=document.getElementById('viviendaDir').value;
+  const ref=document.getElementById('viviendaRef').value;
+  const precio=document.getElementById('precioOferta').value;
+  const agente=document.getElementById('agenteRemitente').value||'agente';
+
+  const hon=T.honorariosTres==='NO'?`NO _(autorización gerencia: ${T.honorariosAutorizado||'—'})_`:'SÍ (3% + IVA)';
+  let hip=T.necesitaHipoteca==='NO'?'NO':'SÍ';
+  if(T.necesitaHipoteca==='SI'){
+    const pct=document.getElementById('porcentajeHipoteca').value;
+    const banco=document.getElementById('bancoPrestamo').value;
+    if(pct) hip+=` — ${pct}%`;
+    if(banco) hip+=` — ${banco}`;
+    if(T.sujetaTaskacion==='SI') hip+=' — Sujeta a tasación';
+    if(T.sujetaTaskacion==='NO') hip+=' — No sujeta a tasación';
+  }
+  const vendeExp=document.getElementById('vendeExplicacion').value;
+  const vende=T.vendeParaComprar==='NO'?'NO':`SÍ${vendeExp?'\n   > '+vendeExp:''}`;
+  const today=new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
+
+  return [
+    `👤 *Perfil del Comprador — ${nombre}*`,``,
+    `🏠 *Inmueble:* ${dir}${ref?' ('+ref+')':''}`,
+    precio?`💶 *Precio oferta:* ${precio} €`:null,
+    tel?`📞 *Teléfono:* ${tel}`:null,
+    email?`📧 *Email:* ${email}`:null,
+    nif?`🪪 *NIF/DNI:* ${nif}`:null,
+    ``,`*─── Checklist ───*`,``,
+    `📋 *Cuestionario rellenado con el cliente:* ${T.cuestionarioRelleno}`,
+    `💶 *Honorarios 3%:* ${hon}`,
+    `🏦 *Necesita hipoteca:* ${hip}`,
+    `🔄 *Vende para comprar:* ${vende}`,
+    `⚠️ *Sabe que puede perder los 1.000 € si el vendedor acepta y se echan atrás:* ${T.sabePierde1000}`,
+    `📝 *Sabe que las arras no se condicionan a hipoteca:* ${T.sabeArrasNoHipoteca}`,
+    ``,`📎 *Documentos adjuntos:* Oferta · Honorarios · Justificante`,
+    ``,`_Enviado por ${agente} · ${today}_`,
+  ].filter(l=>l!==null).join('\n');
+}
+
+// ── SEND ─────────────────────────────────────────────────────────────────
+async function handleSend(){
+  if(!validate()) return;
+  const token=document.getElementById('slackToken').value.trim();
+  const btn=document.getElementById('btn-send');
+  if(!token){alert('⚠️ Introduce el token Slack en Ajustes (⚙️).');return;}
+  if(selectedCaptador.channel==='PENDING'){alert('⚠️ Canal de '+selectedCaptador.name+' pendiente de confirmar.');return;}
+  if(selectedCaptador.channel==='DIRECT'){alert('ℹ️ Este agente no tiene canal. Envía manualmente.');return;}
+
+  btn.disabled=true; btn.textContent='⏳ Enviando…';
+  try{
+    const r=await fetch('https://slack.com/api/chat.postMessage',{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({channel:selectedCaptador.channel,text:buildMsg()}),
+    });
+    const j=await r.json();
+    if(!j.ok) throw new Error('chat.postMessage: '+j.error);
+
+    await Promise.all(['oferta','honorarios','justificante'].map(key=>{
+      const file=FILES[key];
+      const titles={oferta:'📄 Oferta',honorarios:'💶 Honorarios',justificante:'🧾 Justificante'};
+      const fd=new FormData();
+      fd.append('token',token); fd.append('channels',selectedCaptador.channel);
+      fd.append('file',file,file.name); fd.append('title',titles[key]); fd.append('filename',file.name);
+      return fetch('https://slack.com/api/files.upload',{method:'POST',body:fd})
+        .then(r=>r.json()).then(j=>{if(!j.ok) throw new Error(`files.upload(${key}): ${j.error}`);});
+    }));
+
+    document.getElementById('main-view').style.display='none';
+    document.getElementById('success-view').style.display='block';
+    document.getElementById('success-badge').innerHTML=`<div class="success-av">${selectedCaptador.initials}</div><span>Enviado a ${selectedCaptador.name}</span>`;
+    window.scrollTo(0,0);
+  }catch(err){
+    alert('⚠️ Error al enviar:\n'+err.message);
+    btn.disabled=false; btn.textContent='📤 Enviar al captador';
+  }
+}
+
+function resetApp(){
+  Object.keys(T).forEach(k=>delete T[k]);
+  selectedCaptador=null; aiFile=null;
+  FILES.oferta=null; FILES.honorarios=null; FILES.justificante=null;
+  document.getElementById('main-view').style.display='block';
+  document.getElementById('success-view').style.display='none';
+  document.querySelectorAll('input[type=text],input[type=tel],input[type=email],input[type=number],textarea')
+    .forEach(el=>{el.value='';el.classList.remove('input-error','ai-filled');});
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.className='toggle-btn');
+  document.querySelectorAll('.captador-card').forEach(el=>el.classList.remove('selected'));
+  document.querySelectorAll('.sub-q').forEach(el=>el.style.display='none');
+  document.querySelectorAll('.field-error').forEach(el=>el.style.display='none');
+  document.querySelectorAll('.q-label').forEach(el=>el.classList.remove('error'));
+  ['oferta','honorarios','justificante'].forEach(key=>{
+    document.getElementById(`slot-${key}`).classList.remove('done','has-error');
+    document.getElementById(`icon-${key}`).textContent='📎';
+    document.getElementById(`nm-${key}`).textContent='Toca para adjuntar';
+    document.getElementById(`rm-${key}`).style.display='none';
+    const ids={oferta:'fileOferta',honorarios:'fileHonorarios',justificante:'fileJustificante'};
+    document.getElementById(ids[key]).value='';
+  });
+  document.getElementById('ai-selected').classList.remove('show');
+  document.getElementById('ai-input').value='';
+  document.getElementById('btn-extract').disabled=true;
+  document.getElementById('badge-comp').classList.remove('show');
+  document.getElementById('badge-inm').classList.remove('show');
+  setStatus('');
+  document.getElementById('error-banner').style.display='none';
+  document.getElementById('btn-send').disabled=false;
+  document.getElementById('btn-send').textContent='📤 Enviar al captador';
+  window.scrollTo(0,0);
+}
+
+function openSettings(){document.getElementById('settings-overlay').style.display='flex';}
+function closeSettings(){document.getElementById('settings-overlay').style.display='none';}
+</script>
+</body>
+</html>
