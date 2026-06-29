@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import AiExtractor from './AiExtractor';
 import SectionCard from './SectionCard';
 import Field from './Field';
 import { CAPTADORES } from '../data';
@@ -7,6 +8,7 @@ import shared from './StepShared.module.css';
 
 const INITIAL = {
   compradorNombre: '',
+  compradorNif: '',
   compradorTel: '',
   compradorEmail: '',
   viviendaDir: '',
@@ -73,6 +75,12 @@ function FileUploadSlot({ label, file, onFile, hasError, accept = '*/*' }) {
   );
 }
 
+// Badge "Extraído por IA"
+function AiBadge({ show }) {
+  if (!show) return null;
+  return <span className={styles.aiBadge}>✓ Extraído por IA</span>;
+}
+
 export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess }) {
   const [form, setForm] = useState(INITIAL);
   const [captador, setCaptador] = useState(null);
@@ -81,27 +89,49 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
   const [fileOferta, setFileOferta] = useState(null);
   const [fileHonorarios, setFileHonorarios] = useState(null);
   const [fileJustificante, setFileJustificante] = useState(null);
+  const [aiFilledComp, setAiFilledComp] = useState(false);
+  const [aiFilledInm, setAiFilledInm] = useState(false);
 
   function handleChange(key, value) {
     setForm(prev => ({ ...prev, [key]: value }));
     if (errors[key]) setErrors(prev => ({ ...prev, [key]: false }));
   }
 
+  // Called when AI extracts data from document
+  function handleExtracted(data) {
+    const compKeys = ['compradorNombre', 'compradorNif', 'compradorTel'];
+    const inmKeys  = ['viviendaDir', 'viviendaRef', 'precioOferta'];
+    let fillComp = false, fillInm = false;
+
+    const updates = {};
+    Object.entries(data).forEach(([key, val]) => {
+      if (val != null && val !== '') {
+        updates[key] = String(val);
+        if (compKeys.includes(key)) fillComp = true;
+        if (inmKeys.includes(key))  fillInm  = true;
+      }
+    });
+
+    setForm(prev => ({ ...prev, ...updates }));
+    if (fillComp) setAiFilledComp(true);
+    if (fillInm)  setAiFilledInm(true);
+  }
+
   function validate() {
     const errs = {};
     if (!form.compradorNombre.trim()) errs.compradorNombre = true;
-    if (!form.viviendaDir.trim()) errs.viviendaDir = true;
-    if (!captador) errs.captador = true;
-    if (!form.cuestionarioRelleno) errs.cuestionarioRelleno = true;
-    if (!form.honorariosTres) errs.honorariosTres = true;
+    if (!form.viviendaDir.trim())     errs.viviendaDir = true;
+    if (!captador)                    errs.captador = true;
+    if (!form.cuestionarioRelleno)    errs.cuestionarioRelleno = true;
+    if (!form.honorariosTres)         errs.honorariosTres = true;
     if (form.honorariosTres === 'NO' && !form.honorariosAutorizado) errs.honorariosAutorizado = true;
-    if (!form.necesitaHipoteca) errs.necesitaHipoteca = true;
-    if (!form.vendeParaComprar) errs.vendeParaComprar = true;
-    if (!form.sabePierde1000) errs.sabePierde1000 = true;
-    if (!form.sabeArrasNoHipoteca) errs.sabeArrasNoHipoteca = true;
-    if (!fileOferta) errs.fileOferta = true;
-    if (!fileHonorarios) errs.fileHonorarios = true;
-    if (!fileJustificante) errs.fileJustificante = true;
+    if (!form.necesitaHipoteca)       errs.necesitaHipoteca = true;
+    if (!form.vendeParaComprar)       errs.vendeParaComprar = true;
+    if (!form.sabePierde1000)         errs.sabePierde1000 = true;
+    if (!form.sabeArrasNoHipoteca)    errs.sabeArrasNoHipoteca = true;
+    if (!fileOferta)                  errs.fileOferta = true;
+    if (!fileHonorarios)              errs.fileHonorarios = true;
+    if (!fileJustificante)            errs.fileJustificante = true;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -114,7 +144,7 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
     let hipotecaLine = form.necesitaHipoteca === 'NO' ? 'NO' : 'SÍ';
     if (form.necesitaHipoteca === 'SI') {
       if (form.porcentajeHipoteca) hipotecaLine += ` — ${form.porcentajeHipoteca}%`;
-      if (form.bancoPrestamo) hipotecaLine += ` — ${form.bancoPrestamo}`;
+      if (form.bancoPrestamo)      hipotecaLine += ` — ${form.bancoPrestamo}`;
       if (form.sujetaTaskacion === 'SI') hipotecaLine += ' — Sujeta a tasación';
       if (form.sujetaTaskacion === 'NO') hipotecaLine += ' — No sujeta a tasación';
     }
@@ -128,9 +158,10 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
       `👤 *Perfil del Comprador — ${form.compradorNombre}*`,
       ``,
       `🏠 *Inmueble:* ${form.viviendaDir}${form.viviendaRef ? ' (' + form.viviendaRef + ')' : ''}`,
-      form.precioOferta ? `💶 *Precio oferta:* ${parseFloat(form.precioOferta).toLocaleString('es-ES')} €` : null,
-      form.compradorTel ? `📞 *Teléfono:* ${form.compradorTel}` : null,
-      form.compradorEmail ? `📧 *Email:* ${form.compradorEmail}` : null,
+      form.precioOferta ? `💶 *Precio oferta:* ${form.precioOferta} €` : null,
+      form.compradorTel   ? `📞 *Teléfono:* ${form.compradorTel}`    : null,
+      form.compradorEmail ? `📧 *Email:* ${form.compradorEmail}`      : null,
+      form.compradorNif   ? `🪪 *NIF/DNI:* ${form.compradorNif}`     : null,
       ``,
       `*─── Checklist ───*`,
       ``,
@@ -164,7 +195,7 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
     setSending(true);
 
     if (!slackToken) {
-      alert('⚠️ Introduce el token Slack en Ajustes (⚙️) para poder enviar.');
+      alert('⚠️ Introduce el token Slack en Ajustes (⚙️).');
       setSending(false);
       return;
     }
@@ -189,15 +220,16 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
       if (!msgJson.ok) throw new Error('chat.postMessage: ' + msgJson.error);
 
       await Promise.all([
-        uploadFile(slackToken, captador.channel, fileOferta, '📄 Oferta'),
-        uploadFile(slackToken, captador.channel, fileHonorarios, '💶 Honorarios'),
-        uploadFile(slackToken, captador.channel, fileJustificante, '🧾 Justificante'),
+        uploadFile(slackToken, captador.channel, fileOferta,      '📄 Oferta'),
+        uploadFile(slackToken, captador.channel, fileHonorarios,  '💶 Honorarios'),
+        uploadFile(slackToken, captador.channel, fileJustificante,'🧾 Justificante'),
       ]);
 
       onSuccess(captador);
     } catch (err) {
       alert('⚠️ Error al enviar por Slack:\n' + err.message);
     }
+
     setSending(false);
   }
 
@@ -205,50 +237,68 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
 
   return (
     <div>
+      {/* ── AI EXTRACTION ── */}
+      <AiExtractor onExtracted={handleExtracted} />
+
       {errCount > 0 && (
         <div className={styles.errorBanner}>
           ⚠️ Hay {errCount} campo{errCount > 1 ? 's' : ''} sin completar. Revisa los elementos marcados.
         </div>
       )}
 
-      <SectionCard icon="👤" title="Datos del comprador">
+      {/* ── COMPRADOR ── */}
+      <SectionCard icon="👤" title="Datos del comprador" extra={<AiBadge show={aiFilledComp} />}>
         <div className={shared.grid}>
           <Field label="Nombre y apellidos" required>
             <input type="text" value={form.compradorNombre}
               onChange={e => handleChange('compradorNombre', e.target.value)}
               placeholder="Nombre completo del comprador"
-              className={errors.compradorNombre ? styles.inputError : ''} />
+              className={`${errors.compradorNombre ? shared.inputError : ''} ${aiFilledComp && form.compradorNombre ? styles.aiFilled : ''}`} />
           </Field>
           <div className={shared.grid2}>
+            <Field label="NIF / DNI">
+              <input type="text" value={form.compradorNif}
+                onChange={e => handleChange('compradorNif', e.target.value)}
+                placeholder="12345678A"
+                className={form.compradorNif && aiFilledComp ? styles.aiFilled : ''} />
+            </Field>
             <Field label="Teléfono">
               <input type="tel" value={form.compradorTel}
-                onChange={e => handleChange('compradorTel', e.target.value)} placeholder="600 000 000" />
-            </Field>
-            <Field label="Email">
-              <input type="email" value={form.compradorEmail}
-                onChange={e => handleChange('compradorEmail', e.target.value)} placeholder="email@ejemplo.com" />
+                onChange={e => handleChange('compradorTel', e.target.value)}
+                placeholder="600 000 000"
+                className={form.compradorTel && aiFilledComp ? styles.aiFilled : ''} />
             </Field>
           </div>
+          <Field label="Email">
+            <input type="email" value={form.compradorEmail}
+              onChange={e => handleChange('compradorEmail', e.target.value)}
+              placeholder="email@ejemplo.com" />
+          </Field>
         </div>
       </SectionCard>
 
-      <SectionCard icon="🏠" title="Inmueble de interés">
+      {/* ── INMUEBLE ── */}
+      <SectionCard icon="🏠" title="Inmueble de interés" extra={<AiBadge show={aiFilledInm} />}>
         <div className={shared.grid}>
           <Field label="Dirección" required>
             <input type="text" value={form.viviendaDir}
               onChange={e => handleChange('viviendaDir', e.target.value)}
               placeholder="C/ Mayor, 12, 3º B, Foios"
-              className={errors.viviendaDir ? styles.inputError : ''} />
+              className={`${errors.viviendaDir ? shared.inputError : ''} ${form.viviendaDir && aiFilledInm ? styles.aiFilled : ''}`} />
           </Field>
           <div className={shared.grid2}>
             <Field label="Ref. comercial">
               <input type="text" value={form.viviendaRef}
-                onChange={e => handleChange('viviendaRef', e.target.value)} placeholder="FOI-1234" />
+                onChange={e => handleChange('viviendaRef', e.target.value)}
+                placeholder="FOI-1234"
+                className={form.viviendaRef && aiFilledInm ? styles.aiFilled : ''} />
             </Field>
             <Field label="Precio de la oferta">
               <div className={shared.amountWrap}>
-                <input type="number" value={form.precioOferta}
-                  onChange={e => handleChange('precioOferta', e.target.value)} placeholder="180000" min="0" />
+                <input type="text" value={form.precioOferta}
+                  onChange={e => handleChange('precioOferta', e.target.value)}
+                  placeholder="180.000"
+                  className={form.precioOferta && aiFilledInm ? styles.aiFilled : ''} />
                 <span className={shared.amountSuffix}>€</span>
               </div>
             </Field>
@@ -256,6 +306,7 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
         </div>
       </SectionCard>
 
+      {/* ── CAPTADOR ── */}
       <SectionCard icon="🎯" title="Captador de la vivienda">
         <p style={{ fontSize: 12, color: 'var(--gray-600)', marginBottom: 14 }}>
           Selecciona el captador — recibirá el perfil y los documentos por Slack.
@@ -273,8 +324,8 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
         {errors.captador && <p className={styles.fieldError} style={{ marginTop: 10 }}>Selecciona un captador.</p>}
       </SectionCard>
 
+      {/* ── CHECKLIST ── */}
       <SectionCard icon="📋" title="Checklist del comprador">
-
         <QuestionRow label="¿Se ha rellenado el cuestionario junto con el cliente?"
           fieldKey="cuestionarioRelleno" form={form} onChange={handleChange}
           hasError={!!errors.cuestionarioRelleno} />
@@ -347,13 +398,12 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
           label="¿Sabe que las arras no se condicionan a la concesión de la hipoteca?"
           fieldKey="sabeArrasNoHipoteca" form={form} onChange={handleChange}
           hasError={!!errors.sabeArrasNoHipoteca} />
-
       </SectionCard>
 
-      {/* DOCUMENTOS */}
+      {/* ── DOCUMENTOS ── */}
       <SectionCard icon="📎" title="Documentos adjuntos">
-        <p className={styles.docsDesc}>
-          Los tres documentos son <strong>obligatorios</strong> para poder enviar. Se adjuntarán al captador en Slack.
+        <p style={{ fontSize: 12, color: 'var(--gray-600)', marginBottom: 16 }}>
+          Los tres documentos son <strong>obligatorios</strong>. Se adjuntarán al captador en Slack.
         </p>
         <div className={styles.fileSlots}>
           <FileUploadSlot label="Oferta" file={fileOferta}

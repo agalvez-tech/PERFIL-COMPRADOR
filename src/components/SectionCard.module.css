@@ -13,6 +13,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .icon {
@@ -33,6 +34,10 @@
   color: var(--black);
   letter-spacing: 0.07em;
   text-transform: uppercase;
+}
+
+.extra {
+  margin-left: auto;
 }
 
 .body {

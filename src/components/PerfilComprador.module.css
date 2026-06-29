@@ -289,3 +289,23 @@
   background: #fef2f2;
   color: #dc2626;
 }
+
+/* ── AI filled fields ── */
+.aiFilled {
+  border-color: #16a34a !important;
+  background: #f0fdf4 !important;
+}
+
+.aiBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #16a34a;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
