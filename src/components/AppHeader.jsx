@@ -2,7 +2,7 @@ import { useState } from 'react';
 import SettingsModal from './SettingsModal';
 import styles from './AppHeader.module.css';
 
-export default function AppHeader({ slackToken, onTokenChange, agenteRemitente, onRemitenteChange }) {
+export default function AppHeader({ agenteRemitente, onRemitenteChange }) {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
@@ -29,8 +29,6 @@ export default function AppHeader({ slackToken, onTokenChange, agenteRemitente, 
 
       {showSettings && (
         <SettingsModal
-          slackToken={slackToken}
-          onTokenChange={onTokenChange}
           agenteRemitente={agenteRemitente}
           onRemitenteChange={onRemitenteChange}
           onClose={() => setShowSettings(false)}

@@ -10,7 +10,28 @@ App interna de **RK Palanca Fontestad** para enviar el perfil del comprador al c
 - **Checklist de 6 preguntas** con lógica condicional (honorarios, hipoteca+banco+tasación, vende para comprar, pérdida de 1.000€, arras)
 - **Selector de captador** con los 22 agentes ordenados alfabéticamente
 - **3 documentos adjuntos obligatorios** (Oferta, Honorarios, Justificante) — se suben a Slack junto con el mensaje
-- **Envío por Slack** al canal del captador seleccionado
+- **Envío por Slack** al canal del captador seleccionado, con botones **✅ Aceptado / ❌ Rechazado**
+- **Contador de envíos y de aceptados**, y aviso automático a comprador + vendedor cuando el captador marca "Aceptado"
+
+---
+
+## Arquitectura
+
+Esta app ya **no envía nada directamente a Slack desde el navegador**. El frontend llama a un
+backend (`backend/`, Cloud Run — proyecto GCP `contratos-498808`) que:
+
+1. Publica el mensaje en Slack con botones interactivos y sube los 3 adjuntos
+2. Guarda el envío en Firestore e incrementa el contador `total_enviados`
+3. Recibe la pulsación del botón (Slack Interactivity), actualiza el contador
+   (`total_aceptados` / `total_rechazados`) y edita el mensaje
+4. Si es "Aceptado": busca el/los vendedor(es) en IA Gestión por la
+   *Ref. comercial* del formulario (== `Ref_CRM`, confirmado) y avisa por
+   SMS + email a comprador y vendedor
+
+El token de Slack y las credenciales de IA Gestión/Altiria/Gmail viven en el
+backend (Secret Manager), no en el dispositivo de cada agente.
+
+Ver `backend/main.py` para el código del servicio.
 
 ---
 
@@ -72,7 +93,14 @@ git push -u origin main
    - Output Directory: `dist`
 4. Pulsa **Deploy**
 
-> No se necesitan variables de entorno — el token Slack y la API Key de Anthropic se guardan en el dispositivo del usuario.
+### 3. Variables de entorno (Vercel)
+
+En **Project Settings → Environment Variables** añade:
+
+| Variable | Valor |
+|----------|-------|
+| `VITE_BACKEND_URL` | URL del servicio Cloud Run `perfil-comprador-backend` |
+| `VITE_BACKEND_API_KEY` | La clave `PERFIL_API_KEY` configurada en el backend (pídela, no está en este repo) |
 
 ---
 
@@ -82,12 +110,10 @@ Pulsa **⚙️** en el header y rellena:
 
 | Campo | Dónde conseguirlo |
 |-------|-------------------|
-| Token Slack Bot (`xoxb-...`) | Slack API → Tu app → OAuth Tokens |
+| Tu nombre | Aparece en el mensaje enviado al captador |
 | API Key Anthropic (`sk-ant-...`) | console.anthropic.com → API Keys |
 
-Ambos se guardan en `localStorage` del dispositivo. No se envían a ningún servidor.
-
-**Permisos necesarios para el bot de Slack:** `chat:write`, `files:write`
+Se guardan en `localStorage` del dispositivo. La API Key de Anthropic no se envía a ningún servidor (la extracción con IA llama directamente a la API de Anthropic desde el navegador).
 
 ---
 

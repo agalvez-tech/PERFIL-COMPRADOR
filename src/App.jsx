@@ -5,15 +5,9 @@ import PerfilComprador from './components/PerfilComprador';
 import styles from './App.module.css';
 
 export default function App() {
-  const [slackToken, setSlackToken] = useState(() => localStorage.getItem('rk_slack_token') || '');
   const [agenteRemitente, setAgenteRemitente] = useState(() => localStorage.getItem('rk_agente_remitente') || '');
   const [done, setDone] = useState(false);
   const [captador, setCaptador] = useState(null);
-
-  function handleTokenChange(val) {
-    setSlackToken(val);
-    localStorage.setItem('rk_slack_token', val);
-  }
 
   function handleRemitenteChange(val) {
     setAgenteRemitente(val);
@@ -34,8 +28,6 @@ export default function App() {
   return (
     <>
       <AppHeader
-        slackToken={slackToken}
-        onTokenChange={handleTokenChange}
         agenteRemitente={agenteRemitente}
         onRemitenteChange={handleRemitenteChange}
       />
@@ -57,7 +49,6 @@ export default function App() {
             </p>
           </div>
           <PerfilComprador
-            slackToken={slackToken}
             agenteRemitente={agenteRemitente}
             onSuccess={handleSuccess}
           />

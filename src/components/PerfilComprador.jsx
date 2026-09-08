@@ -3,6 +3,7 @@ import AiExtractor from './AiExtractor';
 import SectionCard from './SectionCard';
 import Field from './Field';
 import { CAPTADORES } from '../data';
+import { BACKEND_URL, BACKEND_API_KEY } from '../config';
 import styles from './PerfilComprador.module.css';
 import shared from './StepShared.module.css';
 
@@ -81,7 +82,7 @@ function AiBadge({ show }) {
   return <span className={styles.aiBadge}>✓ Extraído por IA</span>;
 }
 
-export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess }) {
+export default function PerfilComprador({ agenteRemitente, onSuccess }) {
   const [form, setForm] = useState(INITIAL);
   const [captador, setCaptador] = useState(null);
   const [errors, setErrors] = useState({});
@@ -178,27 +179,10 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
     ].filter(l => l !== null).join('\n');
   }
 
-  async function uploadFile(token, channelId, file, title) {
-    const fd = new FormData();
-    fd.append('token', token);
-    fd.append('channels', channelId);
-    fd.append('file', file, file.name);
-    fd.append('title', title);
-    fd.append('filename', file.name);
-    const res = await fetch('https://slack.com/api/files.upload', { method: 'POST', body: fd });
-    const json = await res.json();
-    if (!json.ok) throw new Error('files.upload (' + title + '): ' + json.error);
-  }
-
   async function handleSend() {
     if (!validate()) { window.scrollTo(0, 0); return; }
     setSending(true);
 
-    if (!slackToken) {
-      alert('⚠️ Introduce el token Slack en Ajustes (⚙️).');
-      setSending(false);
-      return;
-    }
     if (captador?.channel === 'PENDING') {
       alert('⚠️ El canal de ' + captador.name + ' está pendiente de confirmar.');
       setSending(false);
@@ -211,23 +195,30 @@ export default function PerfilComprador({ slackToken, agenteRemitente, onSuccess
     }
 
     try {
-      const msgRes = await fetch('https://slack.com/api/chat.postMessage', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${slackToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel: captador.channel, text: buildSlackMessage() }),
-      });
-      const msgJson = await msgRes.json();
-      if (!msgJson.ok) throw new Error('chat.postMessage: ' + msgJson.error);
+      const fd = new FormData();
+      fd.append('mensaje', buildSlackMessage());
+      fd.append('captadorChannel', captador.channel);
+      fd.append('captadorNombre', captador.name);
+      fd.append('compradorNombre', form.compradorNombre);
+      fd.append('compradorTel', form.compradorTel);
+      fd.append('compradorEmail', form.compradorEmail);
+      fd.append('viviendaDir', form.viviendaDir);
+      fd.append('viviendaRef', form.viviendaRef);
+      fd.append('fileOferta', fileOferta);
+      fd.append('fileHonorarios', fileHonorarios);
+      fd.append('fileJustificante', fileJustificante);
 
-      await Promise.all([
-        uploadFile(slackToken, captador.channel, fileOferta,      '📄 Oferta'),
-        uploadFile(slackToken, captador.channel, fileHonorarios,  '💶 Honorarios'),
-        uploadFile(slackToken, captador.channel, fileJustificante,'🧾 Justificante'),
-      ]);
+      const res = await fetch(`${BACKEND_URL}/enviar`, {
+        method: 'POST',
+        headers: { 'X-Perfil-Key': BACKEND_API_KEY },
+        body: fd,
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Error desconocido');
 
       onSuccess(captador);
     } catch (err) {
-      alert('⚠️ Error al enviar por Slack:\n' + err.message);
+      alert('⚠️ Error al enviar:\n' + err.message);
     }
 
     setSending(false);

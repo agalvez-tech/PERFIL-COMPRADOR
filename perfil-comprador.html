@@ -436,48 +436,55 @@ input.ai-filled { border-color: #16a34a !important; background: #f0fdf4 !importa
       <button class="modal-close" onclick="closeSettings()">✕</button>
     </div>
     <div class="modal-body">
-      <p class="modal-section">Slack</p>
-      <div class="field"><label>Token Slack Bot</label><input type="password" id="slackToken" placeholder="xoxb-..." autocomplete="off" oninput="localStorage.setItem('rk_slack_token',this.value)"></div>
-      <div class="field"><label>Tu nombre</label><input type="text" id="agenteRemitente" placeholder="Ej: Almudena Gálvez" oninput="localStorage.setItem('rk_agente_remitente',this.value)"></div>
+      <p class="modal-section">Tu nombre</p>
+      <div class="field"><label>Tu nombre (aparece en los envíos)</label><input type="text" id="agenteRemitente" placeholder="Ej: Almudena Gálvez" oninput="localStorage.setItem('rk_agente_remitente',this.value)"></div>
       <p class="modal-section" style="margin-top:4px">Extracción con IA</p>
       <p class="modal-desc">API Key de Anthropic para leer la propuesta automáticamente. Se guarda solo en tu dispositivo.</p>
       <div class="field"><label>API Key Anthropic</label><input type="password" id="anthropicKey" placeholder="sk-ant-..." autocomplete="off" oninput="localStorage.setItem('rk_anthropic_key',this.value)"></div>
-      <p class="modal-hint">Permisos Slack: <code>chat:write</code> · <code>files:write</code></p>
     </div>
     <div class="modal-footer"><button class="btn-done" onclick="closeSettings()">Guardar y cerrar</button></div>
   </div>
 </div>
 
 <script>
+// "channel" = ID de usuario de Slack del captador (U...), verificado (mismos
+// IDs que usan rk-fotografia / rk-firmas-notaria).
 const CAPTADORES = [
-  {name:'Alejandro García',   channel:'C0AAJF80U07', initials:'AG'},
+  {name:'Alejandro García',   channel:'U0A8F8S4PV1', initials:'AG'},
   {name:'Almudena Gálvez',    channel:'DIRECT',       initials:'AL'},
-  {name:'Amparo Orts',        channel:'C0AAGQKHU4X', initials:'AO'},
-  {name:'Asunción Marco',     channel:'C0AAZVD8UUA', initials:'AS'},
-  {name:'Clara Ordoñez',      channel:'C0AAGR9Q2S3', initials:'CO'},
-  {name:'Claudia Stelling',   channel:'C0AAYB1QT8A', initials:'CS'},
-  {name:'Desiree López',      channel:'C0ABB99MV5F', initials:'DL'},
-  {name:'Eva Vallés',         channel:'C0AAJS3F0A3', initials:'EV'},
-  {name:'Fede Carbonell',     channel:'C0ABB13HW1F', initials:'FC'},
-  {name:'Fran Estelles',      channel:'C0AAUMPTSGM', initials:'FE'},
-  {name:'Jose Giménez',       channel:'C0ABSMNFDCY', initials:'JG'},
-  {name:'Lorena Lull',        channel:'C0AAS26GAKD', initials:'LL'},
-  {name:'Maria Jose Ordoñez', channel:'C0AAJGP9K0F', initials:'MJ'},
-  {name:'Mariano Del Prado',  channel:'C0B5FDE159T', initials:'MP'},
-  {name:'Mavi Castillo',      channel:'C0ABT3HLT1N', initials:'MC'},
-  {name:'Mª Luisa Bellver',   channel:'C0AAXU0MC4W', initials:'ML'},
-  {name:'Natalia Sanfélix',   channel:'C0AAWH6HJ3X', initials:'NS'},
-  {name:'Nuria',              channel:'PENDING',      initials:'NU'},
-  {name:'Rosa Doménech',      channel:'C0AAW8EEW94', initials:'RD'},
-  {name:'Sefa Gallent',       channel:'C0AB1TRTQ04', initials:'SG'},
-  {name:'Virginia Corral',    channel:'C0AB3HP8VBN', initials:'VC'},
-  {name:'Yvonne Vidal',       channel:'C0B6D3ZR1FA', initials:'YV'},
+  {name:'Amparo Orts',        channel:'U0A9G0NM3CY', initials:'AO'},
+  {name:'Asunción Marco',     channel:'U0A8F4ATGM9', initials:'AS'},
+  {name:'Clara Ordoñez',      channel:'U0A8KKYSVFY', initials:'CO'},
+  {name:'Claudia Stelling',   channel:'U0A8J7BJ9CM', initials:'CS'},
+  {name:'Desiree López',      channel:'U0A867VKVTR', initials:'DL'},
+  {name:'Eva Vallés',         channel:'U0A8KK02Z6J', initials:'EV'},
+  {name:'Fede Carbonell',     channel:'U0A90DLPULR', initials:'FC'},
+  {name:'Fran Estelles',      channel:'U0A8J7808AH', initials:'FE'},
+  {name:'Jose Giménez',       channel:'U0A865TURHD', initials:'JG'},
+  {name:'Lorena Lull',        channel:'U0A8KK0TG94', initials:'LL'},
+  {name:'Maria Jose Ordoñez', channel:'U0AAFGXHKV2', initials:'MJ'},
+  {name:'Mariano Del Prado',  channel:'U0B2KLBL2US', initials:'MP'},
+  {name:'Mavi Castillo',      channel:'U0A8MLSNHV0', initials:'MC'},
+  {name:'Mª Luisa Bellver',   channel:'U0A8KL3AYPQ', initials:'ML'},
+  {name:'Natalia Sanfélix',   channel:'U0A8J79MECV', initials:'NS'},
+  {name:'Nuria',              channel:'U0B2HH7UXHU', initials:'NU'},
+  {name:'Rosa Doménech',      channel:'U0A8R8ZQSBW', initials:'RD'},
+  {name:'Sefa Gallent',       channel:'U0A8F9QGQTD', initials:'SG'},
+  {name:'Virginia Corral',    channel:'U0A8KL4AC94', initials:'VC'},
+  {name:'Yvonne Vidal',       channel:'U0B2G5FG337', initials:'YV'},
 ];
 
 const EXTRACTION_PROMPT = `Eres un asistente que extrae información de documentos de propuesta de compra inmobiliaria.
 Analiza el documento y extrae ÚNICAMENTE estos datos en formato JSON puro (sin markdown, sin texto extra):
 {"compradorNombre":"nombre completo del comprador","compradorNif":"NIF o DNI","compradorTel":"teléfono si aparece","viviendaDir":"dirección completa del inmueble","viviendaRef":"referencia comercial","precioOferta":"precio en números sin símbolo € ni puntos de miles"}
 Si algún dato no aparece devuelve null para ese campo. No inventes datos.`;
+
+// Backend de perfil-comprador (Cloud Run). Al usar esta versión standalone
+// (sin build ni Vercel), no hay forma de inyectar variables de entorno --
+// sustituye BACKEND_API_KEY por la clave real ANTES de subir este fichero a
+// tu servidor estático, y NO commitees el valor real a git.
+const BACKEND_URL = 'https://perfil-comprador-backend-522842131600.europe-west1.run.app';
+const BACKEND_API_KEY = 'PON_AQUI_TU_CLAVE_REAL';
 
 const T = {}; // toggle state
 let selectedCaptador = null;
@@ -492,7 +499,6 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="captador-name">${c.name}</span>
     </button>`).join('');
   // Load saved settings
-  document.getElementById('slackToken').value     = localStorage.getItem('rk_slack_token')||'';
   document.getElementById('agenteRemitente').value = localStorage.getItem('rk_agente_remitente')||'';
   document.getElementById('anthropicKey').value   = localStorage.getItem('rk_anthropic_key')||'';
 });
@@ -754,31 +760,32 @@ function buildMsg(){
 // ── SEND ─────────────────────────────────────────────────────────────────
 async function handleSend(){
   if(!validate()) return;
-  const token=document.getElementById('slackToken').value.trim();
   const btn=document.getElementById('btn-send');
-  if(!token){alert('⚠️ Introduce el token Slack en Ajustes (⚙️).');return;}
   if(selectedCaptador.channel==='PENDING'){alert('⚠️ Canal de '+selectedCaptador.name+' pendiente de confirmar.');return;}
   if(selectedCaptador.channel==='DIRECT'){alert('ℹ️ Este agente no tiene canal. Envía manualmente.');return;}
 
   btn.disabled=true; btn.textContent='⏳ Enviando…';
   try{
-    const r=await fetch('https://slack.com/api/chat.postMessage',{
-      method:'POST',
-      headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({channel:selectedCaptador.channel,text:buildMsg()}),
-    });
-    const j=await r.json();
-    if(!j.ok) throw new Error('chat.postMessage: '+j.error);
+    const fd=new FormData();
+    fd.append('mensaje', buildMsg());
+    fd.append('captadorChannel', selectedCaptador.channel);
+    fd.append('captadorNombre', selectedCaptador.name);
+    fd.append('compradorNombre', document.getElementById('compradorNombre').value);
+    fd.append('compradorTel', document.getElementById('compradorTel').value);
+    fd.append('compradorEmail', document.getElementById('compradorEmail').value);
+    fd.append('viviendaDir', document.getElementById('viviendaDir').value);
+    fd.append('viviendaRef', document.getElementById('viviendaRef').value);
+    fd.append('fileOferta', FILES.oferta);
+    fd.append('fileHonorarios', FILES.honorarios);
+    fd.append('fileJustificante', FILES.justificante);
 
-    await Promise.all(['oferta','honorarios','justificante'].map(key=>{
-      const file=FILES[key];
-      const titles={oferta:'📄 Oferta',honorarios:'💶 Honorarios',justificante:'🧾 Justificante'};
-      const fd=new FormData();
-      fd.append('token',token); fd.append('channels',selectedCaptador.channel);
-      fd.append('file',file,file.name); fd.append('title',titles[key]); fd.append('filename',file.name);
-      return fetch('https://slack.com/api/files.upload',{method:'POST',body:fd})
-        .then(r=>r.json()).then(j=>{if(!j.ok) throw new Error(`files.upload(${key}): ${j.error}`);});
-    }));
+    const r = await fetch(`${BACKEND_URL}/enviar`, {
+      method: 'POST',
+      headers: { 'X-Perfil-Key': BACKEND_API_KEY },
+      body: fd,
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Error desconocido');
 
     document.getElementById('main-view').style.display='none';
     document.getElementById('success-view').style.display='block';
