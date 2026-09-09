@@ -37,6 +37,21 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+# CORS -- /enviar lo llama directamente el navegador (Vercel), no un servidor,
+# así que necesita estas cabeceras o el fetch() falla con "Failed to fetch".
+# /slack/interactions y /stats no las necesitan pero no molesta tenerlas.
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Perfil-Key"
+    return response
+
+
+@app.route("/enviar", methods=["OPTIONS"])
+def enviar_preflight():
+    return "", 204
+
 db = firestore.Client()
 COL_ENVIOS = "perfil_comprador_envios"
 STATS_COL, STATS_DOC = "perfil_comprador_stats", "global"
@@ -164,20 +179,24 @@ def enviar_email_html(destinatario, asunto, html):
     service.users().messages().send(userId="me", body={"raw": raw}).execute()
 
 
-def mensaje_sms_oferta_aceptada():
+def mensaje_sms_oferta_aceptada(rol):
+    logro = "Tu oferta de compra ha sido aceptada" if rol == "comprador" \
+        else "La oferta de la venta de tu propiedad ha sido aceptada"
     return (
-        f"Enhorabuena! La oferta de la venta de tu propiedad ha sido aceptada, "
+        f"Enhorabuena! {logro}, "
         f"te compartimos un enlace con los siguientes pasos a seguir: {URL_PROCESO_OFERTA}"
     )
 
 
-def mensaje_email_html_oferta_aceptada():
+def mensaje_email_html_oferta_aceptada(rol):
+    logro = "¡Enhorabuena! Tu oferta de compra ha sido aceptada." if rol == "comprador" \
+        else "¡Enhorabuena! La oferta de la venta de tu propiedad ha sido aceptada."
     return f"""\
 <html>
 <body style="font-family:Arial,sans-serif;font-size:15px;color:#333;max-width:600px;margin:auto;">
   <p>¡Hola!</p>
   <p>
-    <strong>¡Enhorabuena! La oferta de la venta de tu propiedad ha sido aceptada.</strong><br>
+    <strong>{logro}</strong><br>
     Te compartimos un enlace con los siguientes pasos a seguir:
   </p>
   <p>
@@ -199,22 +218,22 @@ def mensaje_email_html_oferta_aceptada():
 
 
 def notificar_oferta_aceptada(comprador, vendedores):
-    """Envia SMS + email de oferta aceptada a comprador y a cada vendedor."""
-    msg_sms = mensaje_sms_oferta_aceptada()
-    msg_email = mensaje_email_html_oferta_aceptada()
+    """Envia SMS + email de oferta aceptada a comprador y a cada vendedor, con un mensaje distinto segun el rol."""
     asunto = "¡Enhorabuena, oferta aceptada! — RK Palanca Fontestad"
 
     destinatarios = []
     if comprador.get("telefono") or comprador.get("email"):
-        destinatarios.append(comprador)
-    destinatarios.extend(vendedores)
+        destinatarios.append({**comprador, "rol": "comprador"})
+    destinatarios.extend({**v, "rol": "vendedor"} for v in vendedores)
 
     enviados = []
     for persona in destinatarios:
+        msg_sms = mensaje_sms_oferta_aceptada(persona["rol"])
+        msg_email = mensaje_email_html_oferta_aceptada(persona["rol"])
         tel = TEST_PHONE if TEST_MODE else persona.get("telefono", "")
         email = TEST_EMAIL if TEST_MODE else persona.get("email", "")
         if TEST_MODE:
-            log.info(f"[TEST] SMS -> {tel} | Email -> {email} | {persona.get('nombre')}")
+            log.info(f"[TEST] SMS -> {tel} | Email -> {email} | {persona.get('nombre')} ({persona['rol']})")
         try:
             if tel:
                 enviar_sms(tel, msg_sms)
@@ -397,6 +416,7 @@ def enviar():
 
     doc = {
         "estado": "pendiente",
+        "agenteEnvia": form.get("agenteEnvia", "").strip(),
         "captadorNombre": captador_nombre,
         "captadorChannel": captador_channel,
         "compradorNombre": form.get("compradorNombre", ""),
@@ -506,6 +526,51 @@ def stats():
         "total_aceptados": data.get("total_aceptados", 0),
         "total_rechazados": data.get("total_rechazados", 0),
     })
+
+
+@app.get("/panel")
+def panel():
+    doc = db.collection(STATS_COL).document(STATS_DOC).get()
+    data = doc.to_dict() or {}
+    enviados = data.get("total_enviados", 0)
+    aceptados = data.get("total_aceptados", 0)
+    rechazados = data.get("total_rechazados", 0)
+    pendientes = max(enviados - aceptados - rechazados, 0)
+
+    html = f"""\
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfil del Comprador · Contadores</title>
+<meta http-equiv="refresh" content="60">
+<style>
+  body {{ font-family: -apple-system, 'Segoe UI', Arial, sans-serif; background: #f8f8f6; margin: 0; padding: 40px 20px; color: #1a1a1a; }}
+  h1 {{ text-align: center; font-size: 18px; color: #5a5855; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 32px; }}
+  .grid {{ display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; max-width: 700px; margin: 0 auto; }}
+  .card {{ background: white; border-radius: 14px; padding: 28px 32px; text-align: center; min-width: 140px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }}
+  .num {{ font-size: 42px; font-weight: 700; }}
+  .lbl {{ font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #5a5855; margin-top: 6px; }}
+  .enviados {{ color: #1a1a1a; }}
+  .aceptados {{ color: #16a34a; }}
+  .rechazados {{ color: #dc2626; }}
+  .pendientes {{ color: #CF731B; }}
+  .footer {{ text-align: center; margin-top: 28px; font-size: 11px; color: #9e9b96; }}
+</style>
+</head>
+<body>
+  <h1>Perfil del Comprador — RK Palanca</h1>
+  <div class="grid">
+    <div class="card"><div class="num enviados">{enviados}</div><div class="lbl">Enviados</div></div>
+    <div class="card"><div class="num aceptados">{aceptados}</div><div class="lbl">Aceptados</div></div>
+    <div class="card"><div class="num rechazados">{rechazados}</div><div class="lbl">Rechazados</div></div>
+    <div class="card"><div class="num pendientes">{pendientes}</div><div class="lbl">Pendientes</div></div>
+  </div>
+  <p class="footer">Se actualiza solo cada 60s — recarga la página para verlo al instante.</p>
+</body>
+</html>"""
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.get("/healthz")

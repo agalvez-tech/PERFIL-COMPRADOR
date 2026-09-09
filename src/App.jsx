@@ -49,7 +49,6 @@ export default function App() {
             </p>
           </div>
           <PerfilComprador
-            agenteRemitente={agenteRemitente}
             onSuccess={handleSuccess}
           />
         </main>

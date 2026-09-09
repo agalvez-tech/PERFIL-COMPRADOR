@@ -82,8 +82,9 @@ function AiBadge({ show }) {
   return <span className={styles.aiBadge}>✓ Extraído por IA</span>;
 }
 
-export default function PerfilComprador({ agenteRemitente, onSuccess }) {
+export default function PerfilComprador({ onSuccess }) {
   const [form, setForm] = useState(INITIAL);
+  const [agenteEnvia, setAgenteEnvia] = useState(null);
   const [captador, setCaptador] = useState(null);
   const [errors, setErrors] = useState({});
   const [sending, setSending] = useState(false);
@@ -122,6 +123,7 @@ export default function PerfilComprador({ agenteRemitente, onSuccess }) {
     const errs = {};
     if (!form.compradorNombre.trim()) errs.compradorNombre = true;
     if (!form.viviendaDir.trim())     errs.viviendaDir = true;
+    if (!agenteEnvia)                 errs.agenteEnvia = true;
     if (!captador)                    errs.captador = true;
     if (!form.cuestionarioRelleno)    errs.cuestionarioRelleno = true;
     if (!form.honorariosTres)         errs.honorariosTres = true;
@@ -157,6 +159,7 @@ export default function PerfilComprador({ agenteRemitente, onSuccess }) {
 
     return [
       `👤 *Perfil del Comprador — ${form.compradorNombre}*`,
+      `📤 *Enviado por:* ${agenteEnvia?.name || '—'}`,
       ``,
       `🏠 *Inmueble:* ${form.viviendaDir}${form.viviendaRef ? ' (' + form.viviendaRef + ')' : ''}`,
       form.precioOferta ? `💶 *Precio oferta:* ${form.precioOferta} €` : null,
@@ -175,7 +178,7 @@ export default function PerfilComprador({ agenteRemitente, onSuccess }) {
       ``,
       `📎 *Documentos adjuntos:* Oferta · Honorarios · Justificante`,
       ``,
-      `_Enviado por ${agenteRemitente || 'agente'} · ${today}_`,
+      `_${today}_`,
     ].filter(l => l !== null).join('\n');
   }
 
@@ -197,6 +200,7 @@ export default function PerfilComprador({ agenteRemitente, onSuccess }) {
     try {
       const fd = new FormData();
       fd.append('mensaje', buildSlackMessage());
+      fd.append('agenteEnvia', agenteEnvia.name);
       fd.append('captadorChannel', captador.channel);
       fd.append('captadorNombre', captador.name);
       fd.append('compradorNombre', form.compradorNombre);
@@ -295,6 +299,24 @@ export default function PerfilComprador({ agenteRemitente, onSuccess }) {
             </Field>
           </div>
         </div>
+      </SectionCard>
+
+      {/* ── AGENTE QUE ENVÍA ── */}
+      <SectionCard icon="🧑‍💼" title="Agente que envía la propuesta">
+        <p style={{ fontSize: 12, color: 'var(--gray-600)', marginBottom: 14 }}>
+          Selecciona quién eres — el captador verá quién le ha enviado esta propuesta para poder contactarte.
+        </p>
+        <div className={styles.captadorGrid}>
+          {CAPTADORES.map((c, i) => (
+            <button key={i} type="button"
+              className={`${styles.captadorCard} ${agenteEnvia?.name === c.name ? styles.selected : ''}`}
+              onClick={() => { setAgenteEnvia(c); setErrors(p => ({ ...p, agenteEnvia: false })); }}>
+              <div className={styles.avatar}>{c.initials}</div>
+              <span className={styles.captadorName}>{c.name}</span>
+            </button>
+          ))}
+        </div>
+        {errors.agenteEnvia && <p className={styles.fieldError} style={{ marginTop: 10 }}>Selecciona quién eres.</p>}
       </SectionCard>
 
       {/* ── CAPTADOR ── */}
