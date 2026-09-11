@@ -201,6 +201,7 @@ export default function PerfilComprador({ onSuccess }) {
       const fd = new FormData();
       fd.append('mensaje', buildSlackMessage());
       fd.append('agenteEnvia', agenteEnvia.name);
+      fd.append('agenteEnviaId', agenteEnvia.channel);
       fd.append('captadorChannel', captador.channel);
       fd.append('captadorNombre', captador.name);
       fd.append('compradorNombre', form.compradorNombre);

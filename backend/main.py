@@ -11,8 +11,12 @@ Cloud Run HTTP. Sustituye el envio directo a Slack desde el navegador.
   POST /slack/interactions   -> recibe la pulsacion del boton (Aceptado /
                                  Rechazado), actualiza el estado + contador,
                                  edita el mensaje de Slack (quita botones), y
-                                 si es "Aceptado" avisa a comprador + vendedor
+                                 si es "Aceptado": avisa a comprador + vendedor
                                  (vendedor sacado de IA Gestion por
+                                 referencia), e invita a Julia + Mar + al
+                                 agente que envio la oferta al canal de Slack
+                                 de la propiedad (contrato de mediacion,
+                                 buscado en Firestore por la misma
                                  referencia).
   GET  /stats                 -> contadores actuales.
 """
@@ -55,6 +59,14 @@ def enviar_preflight():
 db = firestore.Client()
 COL_ENVIOS = "perfil_comprador_envios"
 STATS_COL, STATS_DOC = "perfil_comprador_stats", "global"
+
+# Canal de la propiedad (contrato de mediación) -- creado por generate-contract
+# (repo contract-form), colección "contratos_mediacion" en esta misma BD
+# Firestore "(default)". Se invita a estas personas cuando el cliente acepta
+# la oferta:
+COL_MEDIACION = "contratos_mediacion"
+JULIA_SLACK_ID = "U0A8FB3PACT"
+MAR_SLACK_ID = "U0A8KM82WEA"
 
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
@@ -298,6 +310,47 @@ def slack_update_message(channel, ts, blocks, text_fallback):
         log.error(f"chat.update: {j.get('error')}")
 
 
+def get_mediacion_channel_id(referencia):
+    """
+    Busca el canal de Slack del contrato de mediación de esta propiedad
+    (creado por generate-contract), a partir de la misma referencia que
+    "viviendaRef". Devuelve None si no hay ninguno (p.ej. contratos de
+    mediación anteriores al 2026-09-08, cuando ese campo no existía todavía).
+    """
+    if not referencia:
+        return None
+    docs = list(
+        db.collection(COL_MEDIACION).where("form_data.ref_inmueble", "==", referencia).stream()
+    )
+    if not docs:
+        return None
+    # Puede haber más de un borrador si se editó -- nos quedamos con el más reciente.
+    latest = max(docs, key=lambda d: d.to_dict().get("creado_en", ""))
+    return latest.to_dict().get("slack_channel_id")
+
+
+def invitar_canal_mediacion(referencia, agente_envia_id):
+    """Invita a Julia, Mar y al agente que envió la oferta al canal de la propiedad."""
+    channel_id = get_mediacion_channel_id(referencia)
+    if not channel_id:
+        log.warning(f"Sin canal de mediación para Ref {referencia} -- no se invita a nadie")
+        return
+
+    user_ids = [JULIA_SLACK_ID, MAR_SLACK_ID]
+    if agente_envia_id and agente_envia_id.startswith("U"):
+        user_ids.append(agente_envia_id)
+
+    r = requests.post(
+        "https://slack.com/api/conversations.invite",
+        json={"channel": channel_id, "users": ",".join(user_ids)},
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        timeout=10,
+    )
+    j = r.json()
+    if not j.get("ok") and j.get("error") != "already_in_channel":
+        log.error(f"conversations.invite (canal mediación {channel_id}): {j.get('error')}")
+
+
 def slack_upload_file(channel, file_storage, title):
     """
     Slack deprecó files.upload -- flujo nuevo en 3 pasos:
@@ -417,6 +470,7 @@ def enviar():
     doc = {
         "estado": "pendiente",
         "agenteEnvia": form.get("agenteEnvia", "").strip(),
+        "agenteEnviaId": form.get("agenteEnviaId", "").strip(),
         "captadorNombre": captador_nombre,
         "captadorChannel": captador_channel,
         "compradorNombre": form.get("compradorNombre", ""),
@@ -489,6 +543,11 @@ def procesar_decision(action_id, envio_id, channel_id, message_ts):
         }
         enviados = notificar_oferta_aceptada(comprador, vendedores)
         log.info(f"Oferta aceptada {envio_id}: notificados {enviados}")
+
+        try:
+            invitar_canal_mediacion(datos.get("viviendaRef", ""), datos.get("agenteEnviaId", ""))
+        except Exception as e:
+            log.error(f"Error invitando al canal de mediación ({envio_id}): {e}")
 
 
 @app.post("/slack/interactions")
