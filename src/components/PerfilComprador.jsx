@@ -205,6 +205,7 @@ export default function PerfilComprador({ onSuccess }) {
       fd.append('captadorChannel', captador.channel);
       fd.append('captadorNombre', captador.name);
       fd.append('compradorNombre', form.compradorNombre);
+      fd.append('compradorNif', form.compradorNif);
       fd.append('compradorTel', form.compradorTel);
       fd.append('compradorEmail', form.compradorEmail);
       fd.append('viviendaDir', form.viviendaDir);

@@ -133,19 +133,36 @@ def obtener_propietarios_inmueble(referencia):
     return resultado
 
 
-def registrar_reserva_ia_gestion(referencia, comprador_tel, precio_oferta, captador_nombre, agente_comprador_nombre, comprador_nombre):
+def registrar_reserva_ia_gestion(
+    referencia, comprador_tel, precio_oferta, captador_nombre, agente_comprador_nombre,
+    comprador_nombre, comprador_email, comprador_nif,
+):
     """
     Marca el inmueble como Reservado en IA Gestión (con el precio de
-    cierre), y registra la fecha de reserva como una gestión (vinculada por
-    inmueble + teléfono del comprador, sin crear una demanda nueva) --
-    IA Gestión no expone un campo FechaReserva escribible via API, así que
-    la fecha solo queda registrada en la gestión, no en el inmueble.
+    cierre), registra al comprador como contacto (con DNI) y registra la
+    fecha de reserva como una gestión (vinculada por inmueble + teléfono
+    del comprador, sin crear una demanda nueva) -- IA Gestión no expone un
+    campo FechaReserva escribible via API, así que la fecha solo queda
+    registrada en la gestión, no en el inmueble.
     grabar_gestion no tiene campos propios para nombres de captador/agente/
     comprador, así que van como texto libre en Titulo/Descripcion para que
     se vean en el apartado "Operaciones" del inmueble.
     """
     if not referencia:
         return
+
+    if comprador_tel or comprador_email:
+        contacto_params = {"Nombre": comprador_nombre or ""}
+        if comprador_tel:
+            contacto_params["Movil"] = comprador_tel
+        if comprador_email:
+            contacto_params["Email"] = comprador_email
+        if comprador_nif:
+            contacto_params["CIF_NIF"] = comprador_nif
+        try:
+            ia_post("grabar_contacto", contacto_params)
+        except Exception as e:
+            log.error(f"Error grabar_contacto (comprador, Ref {referencia}): {e}")
 
     inmueble_params = {"Ref_Intranet": referencia, "Estado": "Reservado"}
     if precio_oferta:
@@ -573,6 +590,7 @@ def enviar():
         "captadorNombre": captador_nombre,
         "captadorChannel": captador_channel,
         "compradorNombre": form.get("compradorNombre", ""),
+        "compradorNif": form.get("compradorNif", ""),
         "compradorTel": form.get("compradorTel", ""),
         "compradorEmail": form.get("compradorEmail", ""),
         "viviendaDir": form.get("viviendaDir", ""),
@@ -666,6 +684,8 @@ def procesar_decision(action_id, envio_id, channel_id, message_ts):
                 datos.get("captadorNombre", ""),
                 datos.get("agenteEnvia", ""),
                 datos.get("compradorNombre", ""),
+                datos.get("compradorEmail", ""),
+                datos.get("compradorNif", ""),
             )
         except Exception as e:
             log.error(f"Error registrando reserva en IA Gestión ({envio_id}): {e}")
