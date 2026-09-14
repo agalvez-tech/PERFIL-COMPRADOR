@@ -27,6 +27,7 @@ import logging
 import math
 import os
 import threading
+import unicodedata
 import uuid
 from datetime import datetime
 from email.mime.text import MIMEText
@@ -133,20 +134,49 @@ def obtener_propietarios_inmueble(referencia):
     return resultado
 
 
+def _normalizar_nombre(s):
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode("ascii")
+    return s.strip().lower()
+
+
+def buscar_id_agente_ia_gestion(nombre):
+    """
+    Busca el Id numérico de agente en IA Gestión a partir de su nombre
+    (comparando "Nombre Apellidos" normalizado, sin acentos/mayúsculas,
+    con startswith porque IA Gestión guarda más apellidos de los que
+    usamos en nuestras listas internas). Devuelve None si no hay match.
+    """
+    if not nombre:
+        return None
+    try:
+        data = ia_post("agentes", {"Todos": 1})
+        agentes = (data.get("inmobiliarias") or [{}])[0].get("agentes", [])
+    except Exception as e:
+        log.error(f"Error consultando agentes IA Gestión: {e}")
+        return None
+
+    objetivo = _normalizar_nombre(nombre)
+    for a in agentes:
+        completo = _normalizar_nombre(f"{a.get('Nombre', '')} {a.get('Apellidos', '')}")
+        if completo.startswith(objetivo):
+            return a.get("Id")
+    return None
+
+
 def registrar_reserva_ia_gestion(
     referencia, comprador_tel, precio_oferta, captador_nombre, agente_comprador_nombre,
     comprador_nombre, comprador_email, comprador_nif,
 ):
     """
     Marca el inmueble como Reservado en IA Gestión (con el precio de
-    cierre), registra al comprador como contacto (con DNI) y registra la
-    fecha de reserva como una gestión (vinculada por inmueble + teléfono
-    del comprador, sin crear una demanda nueva) -- IA Gestión no expone un
-    campo FechaReserva escribible via API, así que la fecha solo queda
-    registrada en la gestión, no en el inmueble.
-    grabar_gestion no tiene campos propios para nombres de captador/agente/
-    comprador, así que van como texto libre en Titulo/Descripcion para que
-    se vean en el apartado "Operaciones" del inmueble.
+    cierre), registra al comprador como contacto (con DNI), enlaza al
+    captador (IdCaptador del inmueble) y al agente comprador (IdComercial
+    de la gestión), y registra la fecha de reserva como una gestión
+    (vinculada por inmueble + teléfono del comprador, sin crear una
+    demanda nueva) -- IA Gestión no expone un campo FechaReserva ni
+    "precio de cierre" escribibles via API (probado contra un inmueble
+    real: los ignora silenciosamente), así que esos dos solo quedan
+    registrados como texto en la gestión, no como campos propios.
     """
     if not referencia:
         return
@@ -170,6 +200,10 @@ def registrar_reserva_ia_gestion(
             inmueble_params["Precio"] = int(float(str(precio_oferta).replace(",", "").strip()))
         except ValueError:
             pass
+
+    id_captador = buscar_id_agente_ia_gestion(captador_nombre)
+    if id_captador:
+        inmueble_params["IdCaptador"] = id_captador
 
     try:
         ia_post("actualizar_inmueble", inmueble_params)
@@ -203,6 +237,10 @@ def registrar_reserva_ia_gestion(
         gestion_params["telefono_contacto"] = comprador_tel
     if "importe_oferta" not in gestion_params and precio_oferta:
         gestion_params["importe_oferta"] = inmueble_params.get("Precio")
+
+    id_comercial = buscar_id_agente_ia_gestion(agente_comprador_nombre)
+    if id_comercial:
+        gestion_params["IdComercial"] = id_comercial
 
     if "id_inmueble" not in gestion_params and "telefono_contacto" not in gestion_params:
         log.warning(f"Sin id_inmueble ni telefono_contacto para grabar_gestion (Ref {referencia}) -- no se registra")
