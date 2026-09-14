@@ -93,6 +93,30 @@ export default function PerfilComprador({ onSuccess }) {
   const [fileJustificante, setFileJustificante] = useState(null);
   const [aiFilledComp, setAiFilledComp] = useState(false);
   const [aiFilledInm, setAiFilledInm] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+
+  function handleDemoFill() {
+    setForm({
+      ...INITIAL,
+      compradorNombre: 'DEMO Comprador',
+      compradorNif: '00000000T',
+      compradorTel: '697546700',
+      compradorEmail: 'alejandro.m.sapena@gmail.com',
+      viviendaDir: 'Calle Demo 1, Valencia',
+      viviendaRef: 'DEMO-2026',
+      precioOferta: '200000',
+      cuestionarioRelleno: 'SI',
+      honorariosTres: 'SI',
+      necesitaHipoteca: 'NO',
+      vendeParaComprar: 'NO',
+      sabePierde1000: 'SI',
+      sabeArrasNoHipoteca: 'SI',
+    });
+    setAgenteEnvia(CAPTADORES.find(c => c.name === 'Alejandro García') || null);
+    setCaptador(CAPTADORES.find(c => c.name === 'Asunción Marco') || null);
+    setDemoMode(true);
+    setErrors({});
+  }
 
   function handleChange(key, value) {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -132,9 +156,11 @@ export default function PerfilComprador({ onSuccess }) {
     if (!form.vendeParaComprar)       errs.vendeParaComprar = true;
     if (!form.sabePierde1000)         errs.sabePierde1000 = true;
     if (!form.sabeArrasNoHipoteca)    errs.sabeArrasNoHipoteca = true;
-    if (!fileOferta)                  errs.fileOferta = true;
-    if (!fileHonorarios)              errs.fileHonorarios = true;
-    if (!fileJustificante)            errs.fileJustificante = true;
+    if (!demoMode) {
+      if (!fileOferta)                errs.fileOferta = true;
+      if (!fileHonorarios)            errs.fileHonorarios = true;
+      if (!fileJustificante)          errs.fileJustificante = true;
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -176,7 +202,9 @@ export default function PerfilComprador({ onSuccess }) {
       `⚠️ *Sabe que puede perder los 1.000 € si el vendedor acepta y se echan atrás:* ${form.sabePierde1000}`,
       `📝 *Sabe que las arras no se condicionan a hipoteca:* ${form.sabeArrasNoHipoteca}`,
       ``,
-      `📎 *Documentos adjuntos:* Oferta · Honorarios · Justificante`,
+      demoMode
+        ? `📎 *Documentos adjuntos:* (DEMO — sin documentos reales)`
+        : `📎 *Documentos adjuntos:* Oferta · Honorarios · Justificante`,
       ``,
       `_${today}_`,
     ].filter(l => l !== null).join('\n');
@@ -211,9 +239,9 @@ export default function PerfilComprador({ onSuccess }) {
       fd.append('viviendaDir', form.viviendaDir);
       fd.append('viviendaRef', form.viviendaRef);
       fd.append('precioOferta', form.precioOferta);
-      fd.append('fileOferta', fileOferta);
-      fd.append('fileHonorarios', fileHonorarios);
-      fd.append('fileJustificante', fileJustificante);
+      if (fileOferta)       fd.append('fileOferta', fileOferta);
+      if (fileHonorarios)   fd.append('fileHonorarios', fileHonorarios);
+      if (fileJustificante) fd.append('fileJustificante', fileJustificante);
 
       const res = await fetch(`${BACKEND_URL}/enviar`, {
         method: 'POST',
@@ -237,6 +265,15 @@ export default function PerfilComprador({ onSuccess }) {
     <div>
       {/* ── AI EXTRACTION ── */}
       <AiExtractor onExtracted={handleExtracted} />
+
+      <button type="button" onClick={handleDemoFill} style={{
+        display: 'block', margin: '0 0 1rem auto', padding: '.4rem .8rem',
+        fontSize: '.75rem', fontFamily: 'monospace', color: '#a23e34',
+        background: '#fff', border: '1.5px dashed #a23e34', borderRadius: 6,
+        cursor: 'pointer',
+      }}>
+        DEMO_NO_PULSAR
+      </button>
 
       {errCount > 0 && (
         <div className={styles.errorBanner}>

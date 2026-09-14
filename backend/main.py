@@ -181,8 +181,13 @@ def registrar_reserva_ia_gestion(
     if not referencia:
         return
 
+    id_contacto = None
     if comprador_tel or comprador_email:
-        contacto_params = {"Nombre": comprador_nombre or ""}
+        # "Apellidos" es obligatorio en la práctica (columna NOT NULL en su
+        # BD) aunque el manual lo liste como opcional -- sin él, la llamada
+        # falla con un error fatal de SQL. Mandamos "" ya que no separamos
+        # nombre/apellidos en nuestro formulario.
+        contacto_params = {"Nombre": comprador_nombre or "", "Apellidos": ""}
         if comprador_tel:
             contacto_params["Movil"] = comprador_tel
         if comprador_email:
@@ -190,7 +195,8 @@ def registrar_reserva_ia_gestion(
         if comprador_nif:
             contacto_params["CIF_NIF"] = comprador_nif
         try:
-            ia_post("grabar_contacto", contacto_params)
+            resp = ia_post("grabar_contacto", contacto_params)
+            id_contacto = resp.get("id_usuario") if isinstance(resp, dict) else None
         except Exception as e:
             log.error(f"Error grabar_contacto (comprador, Ref {referencia}): {e}")
 
@@ -233,7 +239,9 @@ def registrar_reserva_ia_gestion(
     }
     if id_inmueble:
         gestion_params["id_inmueble"] = id_inmueble
-    if comprador_tel:
+    if id_contacto:
+        gestion_params["id_contacto"] = id_contacto
+    elif comprador_tel:
         gestion_params["telefono_contacto"] = comprador_tel
     if "importe_oferta" not in gestion_params and precio_oferta:
         gestion_params["importe_oferta"] = inmueble_params.get("Precio")
@@ -242,8 +250,8 @@ def registrar_reserva_ia_gestion(
     if id_comercial:
         gestion_params["IdComercial"] = id_comercial
 
-    if "id_inmueble" not in gestion_params and "telefono_contacto" not in gestion_params:
-        log.warning(f"Sin id_inmueble ni telefono_contacto para grabar_gestion (Ref {referencia}) -- no se registra")
+    if not any(k in gestion_params for k in ("id_inmueble", "id_contacto", "telefono_contacto")):
+        log.warning(f"Sin id_inmueble/id_contacto/telefono_contacto para grabar_gestion (Ref {referencia}) -- no se registra")
         return
 
     try:
