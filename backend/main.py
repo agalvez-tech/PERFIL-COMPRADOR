@@ -28,6 +28,7 @@ import math
 import os
 import threading
 import uuid
+from datetime import datetime
 from email.mime.text import MIMEText
 
 import requests
@@ -130,6 +131,70 @@ def obtener_propietarios_inmueble(referencia):
         if telefono or email:
             resultado.append({"nombre": nombre, "telefono": telefono, "email": email})
     return resultado
+
+
+def registrar_reserva_ia_gestion(referencia, comprador_tel, precio_oferta, captador_nombre, agente_comprador_nombre, comprador_nombre):
+    """
+    Marca el inmueble como Reservado en IA Gestión (con el precio de
+    cierre), y registra la fecha de reserva como una gestión (vinculada por
+    inmueble + teléfono del comprador, sin crear una demanda nueva) --
+    IA Gestión no expone un campo FechaReserva escribible via API, así que
+    la fecha solo queda registrada en la gestión, no en el inmueble.
+    grabar_gestion no tiene campos propios para nombres de captador/agente/
+    comprador, así que van como texto libre en Titulo/Descripcion para que
+    se vean en el apartado "Operaciones" del inmueble.
+    """
+    if not referencia:
+        return
+
+    inmueble_params = {"Ref_Intranet": referencia, "Estado": "Reservado"}
+    if precio_oferta:
+        try:
+            inmueble_params["Precio"] = int(float(str(precio_oferta).replace(",", "").strip()))
+        except ValueError:
+            pass
+
+    try:
+        ia_post("actualizar_inmueble", inmueble_params)
+    except Exception as e:
+        log.error(f"Error actualizar_inmueble (Reservado, Ref {referencia}): {e}")
+
+    id_inmueble = None
+    try:
+        data = ia_post("inmueble", {"Ref": referencia})
+        inmueble = data.get("inmueble") if isinstance(data, dict) else None
+        id_inmueble = inmueble.get("Id") if inmueble else None
+    except Exception as e:
+        log.error(f"Error consultando inmueble para gestión (Ref {referencia}): {e}")
+
+    gestion_params = {
+        "accion": "crear",
+        "Tipo": "Oferta",
+        "Estado": "Realizada",
+        "AccionFechaPlanificada": datetime.utcnow().strftime("%Y-%m-%d"),
+        "Titulo": f"Oferta aceptada — Ref {referencia}",
+        "Descripcion": (
+            f"Captador: {captador_nombre or '—'} | "
+            f"Agente comprador: {agente_comprador_nombre or '—'} | "
+            f"Comprador: {comprador_nombre or '—'} | "
+            f"Precio: {precio_oferta or '—'}"
+        ),
+    }
+    if id_inmueble:
+        gestion_params["id_inmueble"] = id_inmueble
+    if comprador_tel:
+        gestion_params["telefono_contacto"] = comprador_tel
+    if "importe_oferta" not in gestion_params and precio_oferta:
+        gestion_params["importe_oferta"] = inmueble_params.get("Precio")
+
+    if "id_inmueble" not in gestion_params and "telefono_contacto" not in gestion_params:
+        log.warning(f"Sin id_inmueble ni telefono_contacto para grabar_gestion (Ref {referencia}) -- no se registra")
+        return
+
+    try:
+        ia_post("grabar_gestion", gestion_params)
+    except Exception as e:
+        log.error(f"Error grabar_gestion (Ref {referencia}): {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -329,14 +394,38 @@ def get_mediacion_channel_id(referencia):
     return latest.to_dict().get("slack_channel_id")
 
 
+CANAL_IPF_COMERCIAL = "C0A8VEM0UPK"
+
+
+def avisar_vivienda_reservada(referencia, captador_nombre, agente_comprador_nombre):
+    """Avisa en el canal IPF Comercial Segunda Mano que la vivienda ha quedado reservada."""
+    texto = (
+        f"🎉 ¡Enhorabuena! Vivienda *{referencia}* RESERVADA, "
+        f"por agente captador *{captador_nombre}* y agente comprador *{agente_comprador_nombre}*"
+    )
+    r = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        json={"channel": CANAL_IPF_COMERCIAL, "text": texto},
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        timeout=10,
+    )
+    j = r.json()
+    if not j.get("ok"):
+        log.error(f"chat.postMessage (IPF Comercial Segunda Mano, Ref {referencia}): {j.get('error')}")
+
+
 def invitar_canal_mediacion(referencia, agente_envia_id):
-    """Invita a Julia, Mar y al agente que envió la oferta al canal de la propiedad."""
+    """
+    Al aceptar la oferta, actualiza quién está en el canal de mediación de la
+    propiedad: entra Mar (gestión de la venta) y el agente que envió la
+    oferta; sale Julia (su papel era el de la exclusiva, ya no interviene).
+    """
     channel_id = get_mediacion_channel_id(referencia)
     if not channel_id:
         log.warning(f"Sin canal de mediación para Ref {referencia} -- no se invita a nadie")
         return
 
-    user_ids = [JULIA_SLACK_ID, MAR_SLACK_ID]
+    user_ids = [MAR_SLACK_ID]
     if agente_envia_id and agente_envia_id.startswith("U"):
         user_ids.append(agente_envia_id)
 
@@ -349,6 +438,16 @@ def invitar_canal_mediacion(referencia, agente_envia_id):
     j = r.json()
     if not j.get("ok") and j.get("error") != "already_in_channel":
         log.error(f"conversations.invite (canal mediación {channel_id}): {j.get('error')}")
+
+    r = requests.post(
+        "https://slack.com/api/conversations.kick",
+        json={"channel": channel_id, "user": JULIA_SLACK_ID},
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        timeout=10,
+    )
+    j = r.json()
+    if not j.get("ok") and j.get("error") not in ("not_in_channel", "cant_kick_self"):
+        log.error(f"conversations.kick (Julia, canal mediación {channel_id}): {j.get('error')}")
 
 
 def slack_upload_file(channel, file_storage, title):
@@ -478,6 +577,7 @@ def enviar():
         "compradorEmail": form.get("compradorEmail", ""),
         "viviendaDir": form.get("viviendaDir", ""),
         "viviendaRef": form.get("viviendaRef", ""),
+        "precioOferta": form.get("precioOferta", ""),
         "mensaje": mensaje,
         "created_at": firestore.SERVER_TIMESTAMP,
     }
@@ -548,6 +648,27 @@ def procesar_decision(action_id, envio_id, channel_id, message_ts):
             invitar_canal_mediacion(datos.get("viviendaRef", ""), datos.get("agenteEnviaId", ""))
         except Exception as e:
             log.error(f"Error invitando al canal de mediación ({envio_id}): {e}")
+
+        try:
+            avisar_vivienda_reservada(
+                datos.get("viviendaRef", ""),
+                datos.get("captadorNombre", ""),
+                datos.get("agenteEnvia", ""),
+            )
+        except Exception as e:
+            log.error(f"Error avisando vivienda reservada ({envio_id}): {e}")
+
+        try:
+            registrar_reserva_ia_gestion(
+                datos.get("viviendaRef", ""),
+                datos.get("compradorTel", ""),
+                datos.get("precioOferta", ""),
+                datos.get("captadorNombre", ""),
+                datos.get("agenteEnvia", ""),
+                datos.get("compradorNombre", ""),
+            )
+        except Exception as e:
+            log.error(f"Error registrando reserva en IA Gestión ({envio_id}): {e}")
 
 
 @app.post("/slack/interactions")

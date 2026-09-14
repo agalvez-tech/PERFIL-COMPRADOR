@@ -209,6 +209,7 @@ export default function PerfilComprador({ onSuccess }) {
       fd.append('compradorEmail', form.compradorEmail);
       fd.append('viviendaDir', form.viviendaDir);
       fd.append('viviendaRef', form.viviendaRef);
+      fd.append('precioOferta', form.precioOferta);
       fd.append('fileOferta', fileOferta);
       fd.append('fileHonorarios', fileHonorarios);
       fd.append('fileJustificante', fileJustificante);
