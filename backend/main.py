@@ -58,6 +58,11 @@ def add_cors_headers(response):
 def enviar_preflight():
     return "", 204
 
+
+@app.route("/extraer", methods=["OPTIONS"])
+def extraer_preflight():
+    return "", 204
+
 db = firestore.Client()
 COL_ENVIOS = "perfil_comprador_envios"
 STATS_COL, STATS_DOC = "perfil_comprador_stats", "global"
@@ -69,6 +74,34 @@ STATS_COL, STATS_DOC = "perfil_comprador_stats", "global"
 COL_MEDIACION = "contratos_mediacion"
 JULIA_SLACK_ID = "U0A8FB3PACT"
 MAR_SLACK_ID = "U0A8KM82WEA"
+MIREIA_SLACK_ID = "U0AGVA645EX"
+
+# Agentes -- nombre a ID de Slack, mismo mapa verificado que usa el frontend
+# (src/data/index.js CAPTADORES) y rk-fotografia/rk-firmas-notaria.
+AGENTS_SLACK = {
+    "Alejandro García": "U0A8F8S4PV1",
+    "Almudena Gálvez": "DIRECT",
+    "Amparo Orts": "U0A9G0NM3CY",
+    "Asunción Marco": "U0A8F4ATGM9",
+    "Clara Ordoñez": "U0A8KKYSVFY",
+    "Claudia Stelling": "U0A8J7BJ9CM",
+    "Desiree López": "U0A867VKVTR",
+    "Eva Vallés": "U0A8KK02Z6J",
+    "Fede Carbonell": "U0A90DLPULR",
+    "Fran Estelles": "U0A8J7808AH",
+    "Jose Giménez": "U0A865TURHD",
+    "Lorena Lull": "U0A8KK0TG94",
+    "Maria Jose Ordoñez": "U0AAFGXHKV2",
+    "Mariano Del Prado": "U0B2KLBL2US",
+    "Mavi Castillo": "U0A8MLSNHV0",
+    "Mª Luisa Bellver": "U0A8KL3AYPQ",
+    "Natalia Sanfélix": "U0A8J79MECV",
+    "Nuria": "U0B2HH7UXHU",
+    "Rosa Doménech": "U0A8R8ZQSBW",
+    "Sefa Gallent": "U0A8F9QGQTD",
+    "Virginia Corral": "U0A8KL4AC94",
+    "Yvonne Vidal": "U0B2G5FG337",
+}
 
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
@@ -97,6 +130,11 @@ TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 # puede autenticarse con IAM) y sin esto cualquiera con la URL podria spamear los
 # canales de Slack y gastar la cuota de Altiria/Gmail.
 PERFIL_API_KEY = os.environ["PERFIL_API_KEY"]
+
+# Key de Anthropic para la extraccion automatica de datos de la propuesta --
+# vive solo aqui (Secret Manager), no en el navegador, para que ningun agente
+# tenga que poner su propia key para poder usar el formulario.
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 
 
 # ---------------------------------------------------------------------------
@@ -200,29 +238,39 @@ def registrar_reserva_ia_gestion(
         except Exception as e:
             log.error(f"Error grabar_contacto (comprador, Ref {referencia}): {e}")
 
-    inmueble_params = {"Ref_Intranet": referencia, "Estado": "Reservado"}
-    if precio_oferta:
-        try:
-            inmueble_params["Precio"] = int(float(str(precio_oferta).replace(",", "").strip()))
-        except ValueError:
-            pass
-
-    id_captador = buscar_id_agente_ia_gestion(captador_nombre)
-    if id_captador:
-        inmueble_params["IdCaptador"] = id_captador
-
-    try:
-        ia_post("actualizar_inmueble", inmueble_params)
-    except Exception as e:
-        log.error(f"Error actualizar_inmueble (Reservado, Ref {referencia}): {e}")
-
+    # El identificador que espera actualizar_inmueble es "Id_Inmueble" (el Id
+    # numerico interno) -- "Ref_Intranet" NO es un alias de nuestra Referencia
+    # (es un ID de sincronizacion de portales, sin relacion, casi siempre
+    # vacio); usarlo ahi hacia que la llamada no encontrara nunca el inmueble
+    # real y el Estado nunca se marcara como Reservado. Confirmado en vivo
+    # contra la API real (Ref 05539): "Id_Inmueble" es el unico parametro que
+    # la reconoce como identificador valido.
     id_inmueble = None
     try:
         data = ia_post("inmueble", {"Ref": referencia})
         inmueble = data.get("inmueble") if isinstance(data, dict) else None
         id_inmueble = inmueble.get("Id") if inmueble else None
     except Exception as e:
-        log.error(f"Error consultando inmueble para gestión (Ref {referencia}): {e}")
+        log.error(f"Error consultando inmueble para Ref {referencia}: {e}")
+
+    if not id_inmueble:
+        log.error(f"No se encontró Id de inmueble para Ref {referencia} -- no se marca como Reservado")
+    else:
+        inmueble_params = {"Id_Inmueble": id_inmueble, "Estado": "Reservado"}
+        if precio_oferta:
+            try:
+                inmueble_params["Precio"] = int(float(str(precio_oferta).replace(",", "").strip()))
+            except ValueError:
+                pass
+
+        id_captador = buscar_id_agente_ia_gestion(captador_nombre)
+        if id_captador:
+            inmueble_params["IdCaptador"] = id_captador
+
+        try:
+            ia_post("actualizar_inmueble", inmueble_params)
+        except Exception as e:
+            log.error(f"Error actualizar_inmueble (Reservado, Ref {referencia}): {e}")
 
     gestion_params = {
         "accion": "crear",
@@ -258,6 +306,108 @@ def registrar_reserva_ia_gestion(
         ia_post("grabar_gestion", gestion_params)
     except Exception as e:
         log.error(f"Error grabar_gestion (Ref {referencia}): {e}")
+
+
+def avisar_visitas_pendientes(referencia):
+    """
+    Al reservarse un inmueble, avisa por Slack (DM) a cada agente que tenga
+    una visita agendada para ese inmueble desde ahora en adelante -- gestión
+    IA Gestión Tipo "visita", Estado "Planificada", filtrada por IdInmueble --
+    para que no se presente con un comprador a ver algo que ya no está
+    disponible.
+    """
+    if not referencia:
+        return
+
+    try:
+        data = ia_post("inmueble", {"Ref": referencia})
+        inmueble = data.get("inmueble") if isinstance(data, dict) else None
+        id_inmueble = inmueble.get("Id") if inmueble else None
+    except Exception as e:
+        log.error(f"Error consultando inmueble para visitas pendientes (Ref {referencia}): {e}")
+        return
+    if not id_inmueble:
+        return
+
+    try:
+        data_gest = ia_post("gestiones", {
+            "IdInmueble": id_inmueble, "Tipo": "visita", "Estado": "Planificada",
+            "numXpagina": 50, "pagina": 1,
+        })
+    except Exception as e:
+        log.error(f"Error consultando visitas pendientes (Ref {referencia}): {e}")
+        return
+
+    ahora = datetime.utcnow()
+    visitas_futuras = []
+    for g in data_gest.get("gestiones", []):
+        fecha_str = g.get("FechaPlanificada")
+        if not fecha_str:
+            continue
+        try:
+            fecha = datetime.strptime(fecha_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+        if fecha >= ahora:
+            visitas_futuras.append((g, fecha))
+
+    if not visitas_futuras:
+        return
+
+    try:
+        data_ag = ia_post("agentes", {"Todos": 1})
+        agentes = {a["Id"]: a for a in (data_ag.get("inmobiliarias") or [{}])[0].get("agentes", [])}
+    except Exception as e:
+        log.error(f"Error consultando agentes IA Gestión (Ref {referencia}): {e}")
+        return
+
+    for gestion, fecha in visitas_futuras:
+        agente = agentes.get(gestion.get("IdComercial"))
+        nombre_agente = " ".join(f"{agente.get('Nombre', '')} {agente.get('Apellidos', '')}".split()) if agente else ""
+        slack_id = buscar_slack_agente(nombre_agente)
+        if not slack_id or slack_id == "DIRECT":
+            log.warning(
+                f"Visita {gestion.get('Id')} (Ref {referencia}) sin Slack ID de agente "
+                f"({nombre_agente or gestion.get('IdComercial')}) -- no se avisa"
+            )
+            continue
+        fecha_legible = fecha.strftime("%d/%m/%Y a las %H:%M")
+        texto = (
+            f"⚠️ Tienes agendada una visita el *{fecha_legible}* para la Ref *{referencia}*, "
+            f"pero el inmueble ya está *reservado*. Puede que convenga cancelarla o avisar al cliente."
+        )
+        try:
+            _dm_slack(slack_id, texto)
+        except Exception as e:
+            log.error(f"Error avisando visita {gestion.get('Id')} ({nombre_agente}, Ref {referencia}): {e}")
+
+
+def buscar_slack_agente(nombre_ia_gestion):
+    """
+    Busca el ID de Slack de un agente a partir de su nombre en IA Gestión,
+    usando el mismo mapa verificado que ya usa el frontend (src/data/index.js
+    CAPTADORES) y rk-fotografia/rk-firmas-notaria. Comparación normalizada
+    con startswith porque IA Gestión puede tener más apellidos que la lista.
+    """
+    if not nombre_ia_gestion:
+        return None
+    completo = _normalizar_nombre(nombre_ia_gestion)
+    for nombre_lista, slack_id in AGENTS_SLACK.items():
+        if completo.startswith(_normalizar_nombre(nombre_lista)):
+            return slack_id
+    return None
+
+
+def _dm_slack(channel, texto):
+    r = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+        json={"channel": channel, "text": texto},
+        timeout=10,
+    )
+    j = r.json()
+    if not j.get("ok"):
+        raise Exception(f"chat.postMessage ({channel}): {j.get('error')}")
 
 
 # ---------------------------------------------------------------------------
@@ -480,15 +630,16 @@ def avisar_vivienda_reservada(referencia, captador_nombre, agente_comprador_nomb
 def invitar_canal_mediacion(referencia, agente_envia_id):
     """
     Al aceptar la oferta, actualiza quién está en el canal de mediación de la
-    propiedad: entra Mar (gestión de la venta) y el agente que envió la
-    oferta; sale Julia (su papel era el de la exclusiva, ya no interviene).
+    propiedad: entran Mar y Mireia (gestión de la venta) y el agente que
+    envió la oferta; sale Julia (su papel era el de la exclusiva, ya no
+    interviene).
     """
     channel_id = get_mediacion_channel_id(referencia)
     if not channel_id:
         log.warning(f"Sin canal de mediación para Ref {referencia} -- no se invita a nadie")
         return
 
-    user_ids = [MAR_SLACK_ID]
+    user_ids = [MAR_SLACK_ID, MIREIA_SLACK_ID]
     if agente_envia_id and agente_envia_id.startswith("U"):
         user_ids.append(agente_envia_id)
 
@@ -611,8 +762,77 @@ def incrementar_stat(campo):
 
 
 # ---------------------------------------------------------------------------
+# Extraccion IA (Anthropic) -- la key vive solo en el backend, ver ANTHROPIC_API_KEY
+# ---------------------------------------------------------------------------
+
+EXTRACTION_PROMPT = """Eres un asistente que extrae información de documentos de propuesta de compra inmobiliaria.
+Analiza el documento y extrae ÚNICAMENTE estos datos en formato JSON puro (sin markdown, sin texto extra):
+{"compradorNombre":"nombre completo del comprador","compradorNif":"NIF o DNI","compradorTel":"teléfono si aparece","viviendaDir":"dirección completa del inmueble","viviendaRef":"referencia comercial","precioOferta":"precio en números sin símbolo euro ni puntos de miles"}
+Si algún dato no aparece devuelve null para ese campo. No inventes datos."""
+
+MEDIA_TYPES = {
+    "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+    "webp": "image/webp", "gif": "image/gif", "heic": "image/jpeg",
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "doc": "application/msword",
+}
+
+
+def get_media_type(filename, fallback):
+    ext = (filename or "").rsplit(".", 1)[-1].lower()
+    return MEDIA_TYPES.get(ext, fallback or "application/octet-stream")
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+@app.post("/extraer")
+def extraer():
+    if request.headers.get("X-Perfil-Key") != PERFIL_API_KEY:
+        return jsonify({"ok": False, "error": "No autorizado"}), 401
+
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"ok": False, "error": "Falta el fichero"}), 400
+
+    mt = get_media_type(file.filename, file.mimetype)
+    b64 = base64.b64encode(file.read()).decode()
+    content = [
+        {
+            "type": "image" if mt.startswith("image/") else "document",
+            "source": {"type": "base64", "media_type": mt, "data": b64},
+        },
+        {"type": "text", "text": EXTRACTION_PROMPT},
+    ]
+
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+            },
+            json={
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": content}],
+            },
+            timeout=60,
+        )
+        data = r.json()
+        if not r.ok:
+            raise RuntimeError(data.get("error", {}).get("message", "Error API Anthropic"))
+
+        texto = next((b["text"] for b in data.get("content", []) if b.get("type") == "text"), "")
+        extraido = json.loads(texto.replace("```json", "").replace("```", "").strip())
+        return jsonify({"ok": True, "datos": extraido})
+    except Exception as e:
+        log.error(f"Error en /extraer: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 @app.post("/enviar")
 def enviar():
@@ -735,6 +955,11 @@ def procesar_decision(action_id, envio_id, channel_id, message_ts):
             )
         except Exception as e:
             log.error(f"Error registrando reserva en IA Gestión ({envio_id}): {e}")
+
+        try:
+            avisar_visitas_pendientes(datos.get("viviendaRef", ""))
+        except Exception as e:
+            log.error(f"Error avisando visitas pendientes ({envio_id}): {e}")
 
 
 @app.post("/slack/interactions")

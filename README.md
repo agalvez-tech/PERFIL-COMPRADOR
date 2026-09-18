@@ -6,7 +6,7 @@ App interna de **RK Palanca Fontestad** para enviar el perfil del comprador al c
 
 ## Funcionalidades
 
-- **Extracción automática con IA** — sube la propuesta firmada (PDF, Word, foto o escaneado) y Claude extrae automáticamente: nombre del comprador, NIF, teléfono, dirección del inmueble, ref. comercial y precio
+- **Extracción automática con IA** — sube la propuesta firmada (PDF, Word, foto o escaneado) y Claude extrae automáticamente: nombre del comprador, NIF, teléfono, dirección del inmueble, ref. comercial y precio (vía el backend, con la key de Anthropic en Secret Manager — ningún agente necesita su propia key)
 - **Checklist de 6 preguntas** con lógica condicional (honorarios, hipoteca+banco+tasación, vende para comprar, pérdida de 1.000€, arras)
 - **Selector de captador** con los 22 agentes ordenados alfabéticamente
 - **3 documentos adjuntos obligatorios** (Oferta, Honorarios, Justificante) — se suben a Slack junto con el mensaje
@@ -28,8 +28,9 @@ backend (`backend/`, Cloud Run — proyecto GCP `contratos-498808`) que:
    *Ref. comercial* del formulario (== `Ref_CRM`, confirmado) y avisa por
    SMS + email a comprador y vendedor
 
-El token de Slack y las credenciales de IA Gestión/Altiria/Gmail viven en el
-backend (Secret Manager), no en el dispositivo de cada agente.
+El token de Slack, las credenciales de IA Gestión/Altiria/Gmail y la API Key
+de Anthropic (extracción con IA) viven en el backend (Secret Manager), no en
+el dispositivo de cada agente.
 
 Ver `backend/main.py` para el código del servicio.
 
@@ -106,14 +107,7 @@ En **Project Settings → Environment Variables** añade:
 
 ## Configuración inicial de la app (en el dispositivo)
 
-Pulsa **⚙️** en el header y rellena:
-
-| Campo | Dónde conseguirlo |
-|-------|-------------------|
-| Tu nombre | Aparece en el mensaje enviado al captador |
-| API Key Anthropic (`sk-ant-...`) | console.anthropic.com → API Keys |
-
-Se guardan en `localStorage` del dispositivo. La API Key de Anthropic no se envía a ningún servidor (la extracción con IA llama directamente a la API de Anthropic desde el navegador).
+Pulsa **⚙️** en el header y rellena tu nombre (aparece en el mensaje enviado al captador). Se guarda en `localStorage` del dispositivo.
 
 ---
 

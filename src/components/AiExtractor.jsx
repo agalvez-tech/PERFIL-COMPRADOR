@@ -1,10 +1,6 @@
 import { useState, useRef } from 'react';
 import styles from './AiExtractor.module.css';
-
-const EXTRACTION_PROMPT = `Eres un asistente que extrae información de documentos de propuesta de compra inmobiliaria.
-Analiza el documento y extrae ÚNICAMENTE estos datos en formato JSON puro (sin markdown, sin texto extra):
-{"compradorNombre":"nombre completo del comprador","compradorNif":"NIF o DNI","compradorTel":"teléfono si aparece","viviendaDir":"dirección completa del inmueble","viviendaRef":"referencia comercial","precioOferta":"precio en números sin símbolo euro ni puntos de miles"}
-Si algún dato no aparece devuelve null para ese campo. No inventes datos.`;
+import { BACKEND_URL, BACKEND_API_KEY } from '../config';
 
 function getFileIcon(name) {
   const ext = (name || '').split('.').pop().toLowerCase();
@@ -12,27 +8,6 @@ function getFileIcon(name) {
   if (ext === 'pdf') return '📑';
   if (['doc','docx'].includes(ext)) return '📝';
   return '📄';
-}
-
-function getMediaType(file) {
-  const ext = file.name.split('.').pop().toLowerCase();
-  const map = {
-    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
-    webp: 'image/webp', gif: 'image/gif', heic: 'image/jpeg',
-    pdf: 'application/pdf',
-    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    doc: 'application/msword',
-  };
-  return map[ext] || file.type || 'application/octet-stream';
-}
-
-function fileToB64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
 }
 
 export default function AiExtractor({ onExtracted }) {
@@ -61,49 +36,23 @@ export default function AiExtractor({ onExtracted }) {
   }
 
   async function extract() {
-    const apiKey = localStorage.getItem('rk_anthropic_key') || '';
-    if (!apiKey) {
-      alert('⚠️ Introduce la API Key de Anthropic en Ajustes (⚙️).');
-      return;
-    }
     setStatus('loading');
     setStatusMsg('Analizando documento con IA…');
 
     try {
-      const b64 = await fileToB64(file);
-      const mt = getMediaType(file);
-      const isImage = mt.startsWith('image/');
+      const formData = new FormData();
+      formData.append('file', file);
 
-      const content = [
-        {
-          type: isImage ? 'image' : 'document',
-          source: { type: 'base64', media_type: mt, data: b64 },
-        },
-        { type: 'text', text: EXTRACTION_PROMPT },
-      ];
-
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp = await fetch(`${BACKEND_URL}/extraer`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
-          messages: [{ role: 'user', content }],
-        }),
+        headers: { 'X-Perfil-Key': BACKEND_API_KEY },
+        body: formData,
       });
 
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error?.message || 'Error API');
+      if (!resp.ok || !data.ok) throw new Error(data.error || 'Error API');
 
-      const text = data.content?.find(b => b.type === 'text')?.text || '';
-      const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-
-      onExtracted(parsed);
+      onExtracted(data.datos);
       setStatus('success');
       setStatusMsg('✅ Datos extraídos — revisa y corrige si es necesario');
     } catch (err) {
