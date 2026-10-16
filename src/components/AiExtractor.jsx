@@ -1,13 +1,55 @@
 import { useState, useRef } from 'react';
 import styles from './AiExtractor.module.css';
-import { BACKEND_URL, BACKEND_API_KEY } from '../config';
-
 function getFileIcon(name) {
   const ext = (name || '').split('.').pop().toLowerCase();
   if (['jpg','jpeg','png','heic','webp'].includes(ext)) return '🖼️';
   if (ext === 'pdf') return '📑';
   if (['doc','docx'].includes(ext)) return '📝';
   return '📄';
+}
+
+function isImage(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  return file.type.startsWith('image/') || ['jpg','jpeg','png','heic','webp'].includes(ext);
+}
+
+function getMediaType(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const map = {
+    pdf: 'application/pdf',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    doc: 'application/msword',
+  };
+  return map[ext] || file.type || 'application/octet-stream';
+}
+
+function fileToB64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// Reduce las fotos a JPEG de máx. 2000px: Vercel limita la petición a 4,5 MB
+// y así las fotos HEIC del iPhone llegan como JPEG, que la IA sí entiende.
+function imageToJpegB64(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 2000 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      res(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
 }
 
 export default function AiExtractor({ onExtracted }) {
@@ -40,13 +82,17 @@ export default function AiExtractor({ onExtracted }) {
     setStatusMsg('Analizando documento con IA…');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const image = isImage(file);
+      const payload = {
+        filename: file.name,
+        mediaType: image ? 'image/jpeg' : getMediaType(file),
+        data: image ? await imageToJpegB64(file) : await fileToB64(file),
+      };
 
-      const resp = await fetch(`${BACKEND_URL}/extraer`, {
+      const resp = await fetch('/api/extraer', {
         method: 'POST',
-        headers: { 'X-Perfil-Key': BACKEND_API_KEY },
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
       const data = await resp.json();
@@ -58,7 +104,7 @@ export default function AiExtractor({ onExtracted }) {
     } catch (err) {
       console.error(err);
       setStatus('error');
-      setStatusMsg('⚠️ No se pudo extraer la información. Rellena los datos manualmente.');
+      setStatusMsg(`⚠️ No se pudo extraer la información (${err.message}). Rellena los datos manualmente.`);
     }
   }
 
