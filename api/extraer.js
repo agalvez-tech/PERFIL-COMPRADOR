@@ -18,6 +18,11 @@ function getApiKey() {
   return (process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
 }
 
+// Solo nombres (nunca valores) de variables que parecen la key, para diagnosticar.
+function candidateEnvNames() {
+  return Object.keys(process.env).filter(k => /anthropic|claude|api_?key/i.test(k));
+}
+
 async function buildDocumentBlock(filename, mediaType, data) {
   const ext = (filename || '').split('.').pop().toLowerCase();
 
@@ -45,7 +50,11 @@ export default async function handler(req, res) {
 
   const apiKey = getApiKey();
   if (!apiKey) {
-    return res.status(500).json({ ok: false, error: 'Falta ANTHROPIC_API_KEY en Vercel' });
+    const nombres = candidateEnvNames();
+    return res.status(500).json({
+      ok: false,
+      error: `Falta ANTHROPIC_API_KEY en Vercel (Production). Variables parecidas: ${nombres.join(', ') || 'ninguna'}`,
+    });
   }
 
   const { filename, mediaType, data } = req.body || {};
