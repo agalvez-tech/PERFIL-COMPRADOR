@@ -14,8 +14,13 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 function getApiKey() {
-  // Acepta también el nombre con prefijo VITE_ por si se creó así en Vercel.
-  return (process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
+  // En Vercel la key está creada como VITE_ANTHROPIC_KEY; se aceptan también los nombres estándar.
+  return (
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.VITE_ANTHROPIC_KEY ||
+    process.env.VITE_ANTHROPIC_API_KEY ||
+    ''
+  ).trim();
 }
 
 // Solo nombres (nunca valores) de variables que parecen la key, para diagnosticar.
