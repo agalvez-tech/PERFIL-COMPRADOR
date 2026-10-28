@@ -309,3 +309,29 @@
   border-radius: 4px;
   letter-spacing: 0.03em;
 }
+
+.recuperado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fdf3e7;
+  border-left: 4px solid #cf731b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.recuperado button {
+  background: none;
+  border: 1px solid #cf731b;
+  color: #cf731b;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}

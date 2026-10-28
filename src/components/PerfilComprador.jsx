@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import AiExtractor from './AiExtractor';
 import SectionCard from './SectionCard';
 import Field from './Field';
@@ -82,10 +82,41 @@ function AiBadge({ show }) {
   return <span className={styles.aiBadge}>✓ Extraído por IA</span>;
 }
 
+/* Borrador en el navegador (como en arras): lo rellenado se guarda mientras se
+   escribe, para que cerrar o recargar la página no obligue a empezar de nuevo.
+   Los documentos adjuntos no caben aquí: hay que volver a subirlos. Se borra al
+   enviar con éxito. */
+const BORRADOR_KEY = 'rk-perfil-comprador-borrador-v1';
+
+function leerBorrador() {
+  try {
+    const b = JSON.parse(localStorage.getItem(BORRADOR_KEY) || 'null');
+    return b && typeof b === 'object' && b.form ? b : null;
+  } catch {
+    return null;
+  }
+}
+
+function escribirBorrador(b) {
+  try {
+    if (b) localStorage.setItem(BORRADOR_KEY, JSON.stringify(b));
+    else localStorage.removeItem(BORRADOR_KEY);
+  } catch {
+    /* modo privado o almacenamiento lleno: se sigue sin borrador */
+  }
+}
+
+const tieneDatos = (b) => !!b && (
+  JSON.stringify({ ...INITIAL, ...b.form }) !== JSON.stringify(INITIAL) || !!b.agenteEnvia || !!b.captador
+);
+const porNombre = (nombre) => CAPTADORES.find(c => c.name === nombre) || null;
+
 export default function PerfilComprador({ onSuccess }) {
-  const [form, setForm] = useState(INITIAL);
-  const [agenteEnvia, setAgenteEnvia] = useState(null);
-  const [captador, setCaptador] = useState(null);
+  const [borradorInicial] = useState(() => { const b = leerBorrador(); return tieneDatos(b) ? b : null; });
+  const [form, setForm] = useState(() => ({ ...INITIAL, ...(borradorInicial?.form || {}) }));
+  const [agenteEnvia, setAgenteEnvia] = useState(() => porNombre(borradorInicial?.agenteEnvia));
+  const [captador, setCaptador] = useState(() => porNombre(borradorInicial?.captador));
+  const [recuperado, setRecuperado] = useState(!!borradorInicial);
   const [errors, setErrors] = useState({});
   const [sending, setSending] = useState(false);
   const [fileOferta, setFileOferta] = useState(null);
@@ -94,6 +125,27 @@ export default function PerfilComprador({ onSuccess }) {
   const [aiFilledComp, setAiFilledComp] = useState(false);
   const [aiFilledInm, setAiFilledInm] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
+
+  // Guarda el borrador medio segundo después de dejar de escribir (la demo no).
+  useEffect(() => {
+    if (demoMode) return;
+    const t = setTimeout(() => {
+      const b = { form, agenteEnvia: agenteEnvia?.name || null, captador: captador?.name || null,
+                  guardadoEn: new Date().toISOString() };
+      escribirBorrador(tieneDatos(b) ? b : null);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [form, agenteEnvia, captador, demoMode]);
+
+  function empezarDeCero() {
+    if (!window.confirm('¿Borrar lo rellenado y empezar de cero?')) return;
+    escribirBorrador(null);
+    setForm(INITIAL);
+    setAgenteEnvia(null);
+    setCaptador(null);
+    setErrors({});
+    setRecuperado(false);
+  }
 
   function handleDemoFill() {
     setForm({
@@ -251,6 +303,7 @@ export default function PerfilComprador({ onSuccess }) {
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Error desconocido');
 
+      escribirBorrador(null);
       onSuccess(captador);
     } catch (err) {
       alert('⚠️ Error al enviar:\n' + err.message);
@@ -274,6 +327,13 @@ export default function PerfilComprador({ onSuccess }) {
       }}>
         DEMO_NO_PULSAR
       </button>
+
+      {recuperado && (
+        <div className={styles.recuperado}>
+          <span>💾 Hemos recuperado lo que tenías rellenado en este navegador. Los documentos adjuntos hay que volver a subirlos.</span>
+          <button type="button" onClick={empezarDeCero}>Empezar de cero</button>
+        </div>
+      )}
 
       {errCount > 0 && (
         <div className={styles.errorBanner}>
