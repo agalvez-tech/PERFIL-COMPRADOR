@@ -164,7 +164,7 @@ export default function PerfilComprador({ onSuccess }) {
       sabePierde1000: 'SI',
       sabeArrasNoHipoteca: 'SI',
     });
-    setAgenteEnvia(CAPTADORES.find(c => c.name === 'Alejandro García') || null);
+    setAgenteEnvia(CAPTADORES.find(c => c.name === 'Almudena Gálvez') || null);
     setCaptador(CAPTADORES.find(c => c.name === 'Asunción Marco') || null);
     setDemoMode(true);
     setErrors({});

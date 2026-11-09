@@ -3,7 +3,6 @@
 // falta un canal compartido. IDs verificados, ya en uso en rk-fotografia /
 // rk-firmas-notaria (usuarios-del-workspace-con-sus-ids.tsv).
 export const CAPTADORES = [
-  { name: 'Alejandro García',   channel: 'U0A8F8S4PV1',  initials: 'AG' },
   { name: 'Almudena Gálvez',    channel: 'DIRECT',        initials: 'AL' },
   { name: 'Amparo Orts',        channel: 'U0A9G0NM3CY',  initials: 'AO' },
   { name: 'Asunción Marco',     channel: 'U0A8F4ATGM9',  initials: 'AS' },

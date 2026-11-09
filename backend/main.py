@@ -79,7 +79,6 @@ MIREIA_SLACK_ID = "U0AGVA645EX"
 # Agentes -- nombre a ID de Slack, mismo mapa verificado que usa el frontend
 # (src/data/index.js CAPTADORES) y rk-fotografia/rk-firmas-notaria.
 AGENTS_SLACK = {
-    "Alejandro García": "U0A8F8S4PV1",
     "Almudena Gálvez": "DIRECT",
     "Amparo Orts": "U0A9G0NM3CY",
     "Asunción Marco": "U0A8F4ATGM9",
