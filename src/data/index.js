@@ -19,6 +19,7 @@ export const CAPTADORES = [
   { name: 'Maria Jose Lluch',   channel: 'U0C5L0Q4E2K',  initials: 'ML' },
   { name: 'Maria Jose Ordoñez', channel: 'U0AAFGXHKV2',  initials: 'MJ' },
   { name: 'Mariano Del Prado',  channel: 'U0B2KLBL2US',  initials: 'MP' },
+  { name: 'Mireia Sáez',        channel: 'U0AGVA645EX',  initials: 'MS' },
   { name: 'Mavi Castillo',      channel: 'U0A8MLSNHV0',  initials: 'MC' },
   { name: 'Mª Luisa Bellver',   channel: 'U0A8KL3AYPQ',  initials: 'ML' },
   { name: 'Natalia Sanfélix',   channel: 'U0A8J79MECV',  initials: 'NS' },
